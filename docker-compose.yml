@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: postgis_lab
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgis/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  jupyter:
+    build: ./docker/jupyter
+    container_name: jupyter_lab
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+      - POSTGRES_HOST=postgis
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/data
+      - ./scripts:/home/jovyan/scripts
+      - ./outputs:/home/jovyan/outputs
+    ports:
+      - "${JUPYTER_PORT}:8888"
+    depends_on:
+      postgis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin_lab
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@geoinformatica.cl
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgis
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  pgadmin_data:

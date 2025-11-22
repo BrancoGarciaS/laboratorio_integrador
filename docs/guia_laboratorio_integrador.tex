@@ -1,0 +1,998 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{enumerate}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usepackage{fontawesome5}
+\usetikzlibrary{shapes,arrows,positioning,calc}
+
+% Configuración de encabezados
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Laboratorio Integrador}
+\rhead{Geoinformática 2025}
+\cfoot{\thepage}
+
+% Comandos personalizados
+\newtcolorbox{taskbox}[2][]{
+    colback=blue!5!white,
+    colframe=blue!75!black,
+    title=#2,
+    fonttitle=\bfseries,
+    #1
+}
+
+\newtcolorbox{alertbox}[1][]{
+    colback=red!5!white,
+    colframe=red!75!black,
+    fonttitle=\bfseries,
+    #1
+}
+
+\newtcolorbox{tipbox}[1][]{
+    colback=green!5!white,
+    colframe=green!75!black,
+    fonttitle=\bfseries,
+    #1
+}
+
+\newtcolorbox{deliverable}[2][]{
+    colback=yellow!5!white,
+    colframe=yellow!75!black,
+    title=#2,
+    fonttitle=\bfseries,
+    #1
+}
+
+\title{
+    \vspace{-2cm}
+    \Large{UNIVERSIDAD DE SANTIAGO DE CHILE} \\
+    \large{Facultad de Ingeniería} \\
+    \large{Departamento de Ingeniería Informática} \\
+    \vspace{1cm}
+    \LARGE{\textbf{Laboratorio Integrador}} \\
+    \Large{\textbf{Análisis Geoespacial Completo de una Comuna Chilena}} \\
+    \vspace{0.5cm}
+    \large{Curso: Desarrollo de Aplicaciones Geoinformáticas}
+}
+
+\author{
+    Prof. Francisco Parra O. \\
+    \texttt{francisco.parra.o@usach.cl}
+}
+
+\date{Fecha de entrega: 3 semanas desde la publicación}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introducción y Objetivos}
+%==============================================================================
+
+\subsection{Contexto}
+
+Este laboratorio integrador representa la culminación de las primeras 7 semanas del curso, donde aplicarán todos los conocimientos adquiridos en un proyecto geoespacial completo y realista. Trabajarán con una comuna chilena de su elección, desarrollando un análisis integral que combine tecnologías, métodos y herramientas aprendidas.
+
+\subsection{Objetivos de Aprendizaje}
+
+Al completar este laboratorio, serán capaces de:
+
+\begin{enumerate}
+    \item \textbf{Integrar múltiples fuentes de datos geoespaciales} (vectoriales, raster, satelitales)
+    \item \textbf{Implementar un pipeline completo} desde la adquisición hasta la visualización
+    \item \textbf{Aplicar técnicas de análisis espacial avanzado} incluyendo geoestadística y ML
+    \item \textbf{Desarrollar una aplicación web interactiva} para presentar resultados
+    \item \textbf{Trabajar colaborativamente} usando control de versiones y buenas prácticas
+    \item \textbf{Documentar técnicamente} un proyecto geoespacial complejo
+\end{enumerate}
+
+\subsection{Modalidad de Trabajo}
+
+\begin{taskbox}{Trabajo en Parejas}
+\begin{itemize}
+    \item Formar grupos de \textbf{exactamente 2 personas}
+    \item Ambos integrantes deben contribuir equitativamente (se revisará Git)
+    \item División clara de responsabilidades pero integración conjunta
+    \item Presentación oral conjunta del trabajo
+\end{itemize}
+\end{taskbox}
+
+%==============================================================================
+\section{Descripción del Proyecto}
+%==============================================================================
+
+\subsection{Visión General}
+
+Desarrollarán un \textbf{Sistema de Análisis Territorial Integral} para una comuna chilena, que incluya:
+
+\begin{enumerate}
+    \item \textbf{Caracterización territorial completa} usando datos oficiales y satelitales
+    \item \textbf{Análisis de patrones espaciales} de variables socioeconómicas y ambientales
+    \item \textbf{Modelo predictivo} usando machine learning geoespacial
+    \item \textbf{Aplicación web interactiva} para exploración de resultados
+    \item \textbf{Documentación y reproducibilidad} completa del análisis
+\end{enumerate}
+
+\subsection{Selección de la Comuna}
+
+\begin{tipbox}
+Criterios para elegir su comuna:
+\begin{itemize}
+    \item \textbf{Disponibilidad de datos}: Verificar acceso a datos INE, municipales, etc.
+    \item \textbf{Diversidad territorial}: Preferir comunas con variedad urbana/rural
+    \item \textbf{Problemática interesante}: Identificar un desafío territorial real
+    \item \textbf{Tamaño manejable}: Evitar comunas extremadamente grandes (ej: Putre) o densas (ej: Santiago Centro) para su primer análisis
+\end{itemize}
+\end{tipbox}
+
+\textbf{Comunas sugeridas} (pero no obligatorias):
+\begin{itemize}
+    \item Región Metropolitana: La Florida, Maipú, Puente Alto, Quilicura
+    \item Valparaíso: Viña del Mar, Quilpué, Villa Alemana
+    \item Biobío: Talcahuano, Chiguayante, San Pedro de la Paz
+    \item La Araucanía: Temuco, Padre Las Casas, Villarrica
+\end{itemize}
+
+%==============================================================================
+\section{Componentes Técnicos Requeridos}
+%==============================================================================
+
+\subsection{Parte 1: Preparación del Entorno (10\%)}
+
+\begin{deliverable}{Entregable 1: Ambiente de Desarrollo}
+\begin{itemize}
+    \item \textbf{Docker Compose} configurado con todos los servicios
+    \item \textbf{PostGIS} con extensiones espaciales activadas
+    \item \textbf{Jupyter Lab} con kernel geoespacial
+    \item \textbf{Scripts de inicialización} automatizados
+    \item \textbf{Documentación} de instalación paso a paso
+\end{itemize}
+\end{deliverable}
+
+\subsubsection{Configuración Docker}
+
+Deben crear un \texttt{docker-compose.yml} que incluya:
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: geodatabase
+      POSTGRES_USER: geouser
+      POSTGRES_PASSWORD: geopass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  jupyter:
+    build: ./docker/jupyter
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/data
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    depends_on:
+      - postgis
+
+  webserver:
+    build: ./docker/web
+    volumes:
+      - ./app:/app
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgis
+
+volumes:
+  postgres_data:
+\end{verbatim}
+
+\subsection{Parte 2: Adquisición y Procesamiento de Datos (20\%)}
+
+\begin{deliverable}{Entregable 2: Dataset Integrado}
+\begin{itemize}
+    \item \textbf{Datos vectoriales}: Límites, manzanas censales, infraestructura
+    \item \textbf{Datos raster}: DEM, imágenes satelitales (Sentinel-2/Landsat)
+    \item \textbf{Datos tabulares}: Censo, socioeconómicos, ambientales
+    \item \textbf{Red vial}: Desde OpenStreetMap usando OSMnx
+    \item \textbf{Base de datos espacial}: Todo cargado en PostGIS
+\end{itemize}
+\end{deliverable}
+
+\subsubsection{Fuentes de Datos Requeridas}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{5cm}}
+\toprule
+\textbf{Tipo de Dato} & \textbf{Fuente} & \textbf{Uso en el Proyecto} \\
+\midrule
+Límites administrativos & IDE Chile & Base cartográfica \\
+Manzanas censales & INE & Unidad de análisis \\
+DEM & ALOS PALSAR / SRTM & Análisis topográfico \\
+Sentinel-2 & Copernicus / GEE & Índices vegetacionales \\
+Red vial & OpenStreetMap & Análisis de accesibilidad \\
+Censo 2017 & INE & Variables socioeconómicas \\
+Uso del suelo & IDE Minvu & Planificación territorial \\
+\bottomrule
+\end{tabular}
+\caption{Fuentes de datos mínimas requeridas}
+\end{table}
+
+\subsubsection{Script de Descarga Automatizada}
+
+Crear \texttt{scripts/download\_data.py}:
+
+\begin{verbatim}
+import os
+import requests
+import geopandas as gpd
+import osmnx as ox
+import ee
+from pathlib import Path
+
+class DataDownloader:
+    def __init__(self, comuna_name, output_dir='../data'):
+        self.comuna = comuna_name
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(exist_ok=True)
+
+    def download_administrative_boundaries(self):
+        """Descarga límites desde IDE Chile"""
+        # Implementar descarga desde WFS
+        pass
+
+    def download_osm_network(self):
+        """Descarga red vial desde OpenStreetMap"""
+        G = ox.graph_from_place(f"{self.comuna}, Chile",
+                               network_type='all')
+        ox.save_graph_geopackage(G,
+                                filepath=self.output_dir / 'red_vial.gpkg')
+
+    def download_sentinel2(self, start_date, end_date):
+        """Descarga imágenes Sentinel-2 desde Google Earth Engine"""
+        ee.Initialize()
+        # Implementar descarga GEE
+        pass
+
+    def download_dem(self):
+        """Descarga DEM de ALOS PALSAR"""
+        # Implementar descarga
+        pass
+\end{verbatim}
+
+\subsection{Parte 3: Análisis Espacial Exploratorio (20\%)}
+
+\begin{deliverable}{Entregable 3: ESDA Completo}
+\begin{itemize}
+    \item \textbf{Estadísticas descriptivas espaciales} de todas las variables
+    \item \textbf{Mapas temáticos} profesionales (mínimo 10)
+    \item \textbf{Análisis de autocorrelación} (Moran's I global y local)
+    \item \textbf{Hot spots y clusters} usando LISA
+    \item \textbf{Análisis multivariado} de componentes principales espaciales
+\end{itemize}
+\end{deliverable}
+
+\subsubsection{Notebook de Análisis Exploratorio}
+
+Crear \texttt{notebooks/01\_exploratory\_analysis.ipynb}:
+
+\begin{verbatim}
+# Análisis de Autocorrelación Espacial
+import pysal
+from pysal.explore import esda
+import splot
+
+# Crear matriz de pesos espaciales
+w = pysal.lib.weights.Queen.from_dataframe(gdf)
+w.transform = 'r'  # Row standardization
+
+# Moran's I Global
+mi = esda.Moran(gdf['variable'], w)
+print(f"Moran's I: {mi.I:.4f}")
+print(f"P-value: {mi.p_norm:.4f}")
+
+# LISA - Local Moran
+lisa = esda.Moran_Local(gdf['variable'], w)
+
+# Visualización
+fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+# Moran Scatterplot
+splot.esda.moran_scatterplot(mi, ax=axes[0])
+
+# LISA Cluster Map
+splot.esda.lisa_cluster(lisa, gdf, ax=axes[1])
+\end{verbatim}
+
+\subsection{Parte 4: Geoestadística y Análisis Avanzado (15\%)}
+
+\begin{deliverable}{Entregable 4: Análisis Geoestadístico}
+\begin{itemize}
+    \item \textbf{Semivariogramas} de variables continuas principales
+    \item \textbf{Interpolación espacial} (Kriging vs IDW comparación)
+    \item \textbf{Superficies de predicción} con medidas de incertidumbre
+    \item \textbf{Validación cruzada} de modelos de interpolación
+    \item \textbf{Análisis de anisotropía} si aplica
+\end{itemize}
+\end{deliverable}
+
+\subsubsection{Análisis de Semivariogramas}
+
+\begin{verbatim}
+import skgstat as skg
+from pykrige.ordinary_kriging import OrdinaryKriging
+
+# Calcular semivariograma experimental
+coords = np.column_stack([gdf.geometry.x, gdf.geometry.y])
+values = gdf['variable'].values
+
+variogram = skg.Variogram(coords, values,
+                          model='exponential',
+                          lag_classes=15,
+                          maxlag=0.3)
+
+# Ajustar modelo
+variogram.fit()
+
+# Parámetros del modelo
+nugget = variogram.nugget
+sill = variogram.sill
+range_ = variogram.range
+
+# Kriging ordinario
+ok = OrdinaryKriging(coords[:, 0], coords[:, 1], values,
+                     variogram_model='exponential',
+                     variogram_parameters={'nugget': nugget,
+                                         'sill': sill,
+                                         'range': range_})
+
+# Crear grid de predicción
+grid_x = np.linspace(coords[:, 0].min(), coords[:, 0].max(), 100)
+grid_y = np.linspace(coords[:, 1].min(), coords[:, 1].max(), 100)
+z_pred, var_pred = ok.execute('grid', grid_x, grid_y)
+\end{verbatim}
+
+\subsection{Parte 5: Machine Learning Geoespacial (20\%)}
+
+\begin{deliverable}{Entregable 5: Modelo Predictivo}
+\begin{itemize}
+    \item \textbf{Definición clara del problema} a resolver con ML
+    \item \textbf{Feature engineering espacial} completo
+    \item \textbf{Comparación de algoritmos} (RF, XGBoost, SVM espacial)
+    \item \textbf{Validación espacial} apropiada (no random split!)
+    \item \textbf{Mapas de predicción} y medidas de incertidumbre
+    \item \textbf{Interpretación del modelo} (SHAP values, feature importance)
+\end{itemize}
+\end{deliverable}
+
+\subsubsection{Ejemplo: Predicción de Valores de Suelo}
+
+\begin{verbatim}
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GroupKFold
+import shap
+
+# Feature Engineering Espacial
+def create_spatial_features(gdf):
+    features = pd.DataFrame()
+
+    # Coordenadas
+    features['x'] = gdf.geometry.x
+    features['y'] = gdf.geometry.y
+
+    # Distancias a puntos de interés
+    features['dist_centro'] = gdf.geometry.distance(centro_point)
+    features['dist_metro'] = gdf.geometry.apply(
+        lambda x: metro_stations.distance(x).min()
+    )
+
+    # Densidades en buffer
+    for radius in [500, 1000, 2000]:
+        buffer = gdf.geometry.buffer(radius)
+        features[f'density_{radius}m'] = buffer.apply(
+            lambda x: gdf[gdf.within(x)].shape[0]
+        )
+
+    # Índices de vegetación desde Sentinel-2
+    features['ndvi_mean'] = extract_zonal_stats(gdf, ndvi_raster, 'mean')
+
+    # Variables topográficas
+    features['elevation'] = extract_zonal_stats(gdf, dem, 'mean')
+    features['slope'] = extract_zonal_stats(gdf, slope_raster, 'mean')
+
+    return features
+
+# Validación Espacial
+spatial_cv = GroupKFold(n_splits=5)
+groups = gdf['zona_id']  # Agrupar por zonas geográficas
+
+# Entrenamiento
+rf_model = RandomForestRegressor(n_estimators=200,
+                                max_depth=10,
+                                min_samples_leaf=5)
+
+scores = cross_val_score(rf_model, X, y,
+                        cv=spatial_cv,
+                        groups=groups,
+                        scoring='r2')
+
+print(f"R2 Score (Spatial CV): {scores.mean():.3f} (+/- {scores.std():.3f})")
+
+# Interpretación con SHAP
+explainer = shap.TreeExplainer(rf_model)
+shap_values = explainer.shap_values(X_test)
+shap.summary_plot(shap_values, X_test)
+\end{verbatim}
+
+\subsection{Parte 6: Aplicación Web Interactiva (15\%)}
+
+\begin{deliverable}{Entregable 6: Dashboard Web}
+\begin{itemize}
+    \item \textbf{Mapa interactivo} con capas temáticas
+    \item \textbf{Gráficos dinámicos} de estadísticas espaciales
+    \item \textbf{Panel de control} para modelos predictivos
+    \item \textbf{Descarga de resultados} en formatos estándar
+    \item \textbf{Documentación de usuario} incluida
+\end{itemize}
+\end{deliverable}
+
+\subsubsection{Estructura de la Aplicación Streamlit}
+
+Crear \texttt{app/main.py}:
+
+\begin{verbatim}
+import streamlit as st
+import folium
+from streamlit_folium import folium_static
+import plotly.express as px
+
+st.set_page_config(page_title="Análisis Territorial Comuna",
+                   layout="wide")
+
+# Sidebar para navegación
+st.sidebar.title("Panel de Control")
+page = st.sidebar.selectbox("Seleccione una sección:",
+                            ["Inicio", "Datos", "Análisis Espacial",
+                             "Modelos ML", "Resultados"])
+
+if page == "Inicio":
+    st.title(f"Sistema de Análisis Territorial - {COMUNA_NAME}")
+    st.markdown("""
+    ## Bienvenido al Dashboard de Análisis Geoespacial
+
+    Este sistema integra múltiples fuentes de datos y técnicas
+    de análisis para proporcionar insights territoriales.
+    """)
+
+    # Mapa general
+    m = folium.Map(location=[lat_center, lon_center], zoom_start=12)
+
+    # Agregar capas
+    folium.GeoJson(comuna_boundary).add_to(m)
+
+    # Agregar controles
+    folium.LayerControl().add_to(m)
+
+    folium_static(m)
+
+elif page == "Análisis Espacial":
+    st.header("Análisis de Autocorrelación Espacial")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.subheader("Moran's I Global")
+        # Mostrar estadístico y p-value
+        st.metric("Índice de Moran", f"{moran_i:.4f}")
+        st.metric("P-value", f"{p_value:.4f}")
+
+    with col2:
+        st.subheader("Distribución LISA")
+        # Gráfico de distribución de clusters
+        fig = px.pie(values=lisa_counts.values(),
+                     names=lisa_counts.keys(),
+                     title="Tipos de Clusters LISA")
+        st.plotly_chart(fig)
+
+elif page == "Modelos ML":
+    st.header("Predicciones de Machine Learning")
+
+    # Selector de modelo
+    model_type = st.selectbox("Seleccione modelo:",
+                              ["Random Forest", "XGBoost", "Neural Network"])
+
+    # Parámetros interactivos
+    if st.button("Ejecutar Predicción"):
+        with st.spinner("Calculando..."):
+            predictions = run_model(model_type, parameters)
+
+        # Mostrar resultados
+        st.success("Predicción completada!")
+
+        # Mapa de predicciones
+        fig = px.choropleth_mapbox(gdf,
+                                   geojson=gdf.geometry,
+                                   locations=gdf.index,
+                                   color='prediction',
+                                   mapbox_style="open-street-map",
+                                   zoom=11,
+                                   center={"lat": lat_center,
+                                          "lon": lon_center})
+        st.plotly_chart(fig)
+\end{verbatim}
+
+%==============================================================================
+\section{Estructura del Proyecto}
+%==============================================================================
+
+\subsection{Organización de Archivos}
+
+\begin{alertbox}
+Es \textbf{obligatorio} seguir esta estructura de carpetas para facilitar la evaluación:
+\end{alertbox}
+
+\begin{verbatim}
+laboratorio_integrador/
+|-- README.md                    # Documentación principal
+|-- requirements.txt             # Dependencias Python
+|-- docker-compose.yml          # Configuración Docker
+|-- .env                        # Variables de entorno (no subir!)
+|-- .gitignore                  # Archivos a ignorar en Git
+|
+|-- docker/                     # Configuraciones Docker
+|   |-- jupyter/
+|   |   +-- Dockerfile
+|   |-- postgis/
+|   |   +-- init.sql
+|   +-- web/
+|       +-- Dockerfile
+|
+|-- data/                       # Datos (incluir sample data)
+|   |-- raw/                   # Datos originales
+|   |-- processed/             # Datos procesados
+|   +-- README.md              # Descripción de los datos
+|
+|-- notebooks/                  # Análisis en Jupyter
+|   |-- 01_data_acquisition.ipynb
+|   |-- 02_exploratory_analysis.ipynb
+|   |-- 03_geostatistics.ipynb
+|   |-- 04_machine_learning.ipynb
+|   +-- 05_results_synthesis.ipynb
+|
+|-- scripts/                    # Scripts Python
+|   |-- download_data.py
+|   |-- process_data.py
+|   |-- spatial_analysis.py
+|   +-- utils.py
+|
+|-- app/                        # Aplicación web
+|   |-- main.py
+|   |-- pages/
+|   |-- components/
+|   +-- static/
+|
+|-- outputs/                    # Resultados
+|   |-- figures/               # Gráficos y mapas
+|   |-- models/                # Modelos entrenados
+|   +-- reports/               # Informes generados
+|
++-- docs/                       # Documentación
+    |-- guia_usuario.md
+    |-- arquitectura.md
+    +-- api_reference.md
+\end{verbatim}
+
+%==============================================================================
+\section{Criterios de Evaluación}
+%==============================================================================
+
+\subsection{Rúbrica de Evaluación}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcp{7cm}}
+\toprule
+\textbf{Componente} & \textbf{Peso} & \textbf{Criterios} \\
+\midrule
+Configuración del entorno & 10\% &
+\begin{itemize}
+    \item Docker funcional (3\%)
+    \item PostGIS configurado (3\%)
+    \item Jupyter con librerías (2\%)
+    \item Documentación clara (2\%)
+\end{itemize} \\
+\midrule
+Adquisición de datos & 20\% &
+\begin{itemize}
+    \item Variedad de fuentes (5\%)
+    \item Calidad del procesamiento (5\%)
+    \item Integración en PostGIS (5\%)
+    \item Automatización (5\%)
+\end{itemize} \\
+\midrule
+Análisis espacial & 20\% &
+\begin{itemize}
+    \item ESDA completo (5\%)
+    \item Autocorrelación espacial (5\%)
+    \item Visualizaciones (5\%)
+    \item Interpretación (5\%)
+\end{itemize} \\
+\midrule
+Geoestadística & 15\% &
+\begin{itemize}
+    \item Semivariogramas (5\%)
+    \item Interpolación (5\%)
+    \item Validación (5\%)
+\end{itemize} \\
+\midrule
+Machine Learning & 20\% &
+\begin{itemize}
+    \item Feature engineering (5\%)
+    \item Modelos apropiados (5\%)
+    \item Validación espacial (5\%)
+    \item Interpretabilidad (5\%)
+\end{itemize} \\
+\midrule
+Aplicación web & 15\% &
+\begin{itemize}
+    \item Funcionalidad (5\%)
+    \item Interfaz (5\%)
+    \item Interactividad (5\%)
+\end{itemize} \\
+\bottomrule
+\end{tabular}
+\caption{Distribución de puntajes por componente}
+\end{table}
+
+\subsection{Criterios de Excelencia}
+
+Para optar a nota máxima (7.0), además de cumplir todos los requisitos, deben incluir \textbf{al menos 3} de los siguientes elementos:
+
+\begin{enumerate}
+    \item \textbf{Deep Learning}: Implementar CNN para clasificación de imágenes satelitales
+    \item \textbf{Series temporales}: Análisis de cambios usando múltiples fechas de imágenes
+    \item \textbf{Optimización espacial}: Problema de localización óptima resuelto
+    \item \textbf{API REST}: Endpoints para acceder a los modelos y datos
+    \item \textbf{Visualización 3D}: Incorporar visualizaciones 3D del terreno
+    \item \textbf{Análisis de redes}: Análisis avanzado de la red vial (centralidad, accesibilidad)
+    \item \textbf{Validación externa}: Comparar con datos de terreno o fuentes independientes
+\end{enumerate}
+
+%==============================================================================
+\section{Entregables y Plazos}
+%==============================================================================
+
+\subsection{Hitos del Proyecto}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llp{6cm}}
+\toprule
+\textbf{Semana} & \textbf{Hito} & \textbf{Entregable} \\
+\midrule
+1 & Formación y Setup &
+\begin{itemize}
+    \item Grupos formados
+    \item Comuna seleccionada
+    \item Ambiente Docker funcionando
+    \item Repositorio Git creado
+\end{itemize} \\
+\midrule
+2 & Datos y Análisis &
+\begin{itemize}
+    \item Todos los datos descargados
+    \item ESDA completado
+    \item Primeros modelos ML
+\end{itemize} \\
+\midrule
+3 & Finalización &
+\begin{itemize}[
+    \item Aplicación web funcional
+    \item Documentación completa
+    \item Video de presentación (5 min)
+    \item Código en repositorio
+\end{itemize} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Formato de Entrega}
+
+\begin{alertbox}
+\textbf{Entrega vía Moodle antes de las 23:59 del día límite:}
+\begin{itemize}
+    \item Link al repositorio GitHub (público o con acceso al profesor)
+    \item ZIP con snapshot del código (backup)
+    \item Link al video de YouTube (no listado)
+    \item Informe PDF de máximo 10 páginas
+\end{itemize}
+\end{alertbox}
+
+\subsection{Presentación del Proyecto}
+
+\begin{tipbox}
+\textbf{Video de presentación (5 minutos):}
+\begin{enumerate}
+    \item Introducción y problemática (30 seg)
+    \item Demo del ambiente y datos (1 min)
+    \item Resultados del análisis espacial (1 min)
+    \item Modelos de ML y predicciones (1 min)
+    \item Demo de la aplicación web (1 min)
+    \item Conclusiones y aprendizajes (30 seg)
+\end{enumerate}
+\end{tipbox}
+
+%==============================================================================
+\section{Recursos y Soporte}
+%==============================================================================
+
+\subsection{Recursos Recomendados}
+
+\subsubsection{Documentación Técnica}
+\begin{itemize}
+    \item GeoPandas: \url{https://geopandas.org}
+    \item PySAL: \url{https://pysal.org}
+    \item OSMnx: \url{https://osmnx.readthedocs.io}
+    \item Rasterio: \url{https://rasterio.readthedocs.io}
+    \item Streamlit: \url{https://docs.streamlit.io}
+\end{itemize}
+
+\subsubsection{Fuentes de Datos}
+\begin{itemize}
+    \item IDE Chile: \url{https://www.ide.cl}
+    \item INE: \url{https://www.ine.cl}
+    \item Google Earth Engine: \url{https://earthengine.google.com}
+    \item OpenStreetMap: \url{https://www.openstreetmap.org}
+    \item Copernicus Hub: \url{https://scihub.copernicus.eu}
+\end{itemize}
+
+\subsection{Soporte y Consultas}
+
+\begin{taskbox}{Canales de Comunicación}
+\begin{itemize}
+    \item \textbf{Horario de consultas}: Martes y Jueves 15:00-17:00
+    \item \textbf{Foro Moodle}: Para dudas generales
+    \item \textbf{Email}: francisco.parra.o@usach.cl (solo urgencias)
+    \item \textbf{Discord del curso}: Canal \#laboratorio-integrador
+\end{itemize}
+\end{taskbox}
+
+%==============================================================================
+\section{Anexo: Código de Inicio Rápido}
+%==============================================================================
+
+\subsection{Script de Configuración Inicial}
+
+Crear archivo \texttt{setup.sh}:
+
+\begin{verbatim}
+#!/bin/bash
+# Script de configuración inicial del proyecto
+
+echo "==================================="
+echo "Configuración Laboratorio Integrador"
+echo "==================================="
+
+# Crear estructura de directorios
+mkdir -p data/{raw,processed}
+mkdir -p notebooks
+mkdir -p scripts
+mkdir -p app/{pages,components,static}
+mkdir -p outputs/{figures,models,reports}
+mkdir -p docker/{jupyter,postgis,web}
+
+# Crear archivo de ambiente
+cat > .env << EOF
+POSTGRES_DB=geodatabase
+POSTGRES_USER=geouser
+POSTGRES_PASSWORD=geopass
+JUPYTER_TOKEN=your_token_here
+COMUNA_NAME=your_comuna_here
+EOF
+
+# Crear requirements.txt
+cat > requirements.txt << EOF
+# Geospatial
+geopandas==0.14.0
+shapely==2.0.2
+pyproj==3.6.1
+rasterio==1.3.9
+fiona==1.9.5
+osmnx==1.7.1
+
+# Data Science
+pandas==2.1.3
+numpy==1.24.3
+scikit-learn==1.3.2
+xgboost==2.0.2
+
+# Spatial Analysis
+pysal==2.9.3
+esda==2.5.1
+splot==1.1.5
+scikit-gstat==1.0.15
+pykrige==1.7.0
+
+# Visualization
+matplotlib==3.8.1
+seaborn==0.13.0
+plotly==5.18.0
+folium==0.15.0
+streamlit==1.28.2
+streamlit-folium==0.15.0
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+geoalchemy2==0.14.2
+
+# Web
+fastapi==0.104.1
+uvicorn==0.24.0
+
+# Utils
+python-dotenv==1.0.0
+tqdm==4.66.1
+click==8.1.7
+EOF
+
+# Crear .gitignore
+cat > .gitignore << EOF
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Data
+data/raw/*
+data/processed/*
+*.tif
+*.shp
+*.gpkg
+!data/raw/sample*
+!data/processed/sample*
+
+# Models
+*.pkl
+*.h5
+*.pt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+EOF
+
+echo "Configuración completada!"
+echo "Siguiente paso: docker-compose up -d"
+\end{verbatim}
+
+\subsection{Notebook de Ejemplo}
+
+Crear \texttt{notebooks/00\_template.ipynb}:
+
+\begin{verbatim}
+# Celda 1: Configuración inicial
+import warnings
+warnings.filterwarnings('ignore')
+
+import sys
+sys.path.append('../scripts')
+
+from pathlib import Path
+import pandas as pd
+import geopandas as gpd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Configuración de visualización
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set_palette("husl")
+
+# Paths
+DATA_DIR = Path('../data')
+RAW_DATA = DATA_DIR / 'raw'
+PROCESSED_DATA = DATA_DIR / 'processed'
+OUTPUT_DIR = Path('../outputs')
+
+print(f"Ambiente configurado correctamente!")
+print(f"Comuna de análisis: {os.getenv('COMUNA_NAME')}")
+
+# Celda 2: Conexión a PostGIS
+from sqlalchemy import create_engine
+from geoalchemy2 import Geometry
+
+# Crear conexión
+engine = create_engine(
+    f"postgresql://geouser:geopass@postgis:5432/geodatabase"
+)
+
+# Test de conexión
+with engine.connect() as conn:
+    result = conn.execute("SELECT PostGIS_Version();")
+    print(f"PostGIS Version: {result.fetchone()[0]}")
+
+# Celda 3: Funciones auxiliares
+def load_geodata(table_name):
+    """Carga datos geoespaciales desde PostGIS"""
+    return gpd.read_postgis(
+        f"SELECT * FROM {table_name}",
+        engine,
+        geom_col='geometry'
+    )
+
+def save_map(fig, name):
+    """Guarda figuras en alta resolución"""
+    fig.savefig(OUTPUT_DIR / 'figures' / f'{name}.png',
+                dpi=300, bbox_inches='tight')
+    print(f"Mapa guardado: {name}.png")
+
+# Celda 4: Carga de datos inicial
+comuna_boundary = load_geodata('comuna_boundary')
+print(f"Área de la comuna: {comuna_boundary.area[0] / 1e6:.2f} km²")
+print(f"Sistema de coordenadas: {comuna_boundary.crs}")
+\end{verbatim}
+
+%==============================================================================
+\section{Conclusión}
+%==============================================================================
+
+Este laboratorio integrador representa una oportunidad única para aplicar todo lo aprendido en un proyecto real y complejo. El éxito dependerá de:
+
+\begin{enumerate}
+    \item \textbf{Planificación}: Dividir tareas y gestionar tiempo
+    \item \textbf{Colaboración}: Trabajo efectivo en equipo
+    \item \textbf{Documentación}: Código y procesos claros
+    \item \textbf{Creatividad}: Soluciones innovadoras a problemas reales
+    \item \textbf{Rigurosidad}: Métodos apropiados y validación correcta
+\end{enumerate}
+
+\begin{tipbox}
+\textbf{¡Éxito en su proyecto!}\\
+Recuerden que este trabajo es una excelente pieza para su portafolio profesional. Háganlo con dedicación y será una carta de presentación valiosa en su carrera.
+\end{tipbox}
+
+\end{document}
