@@ -259,38 +259,240 @@ Próximos pasos (procesamiento):
 
 Estas tareas se documentarán en una sección futura de "Procesamiento de Rasters".
 
-### 4. Carga de Capas OSM a PostGIS
+### 4. Carga y Procesamiento Inicial (OSM + DEM + Enriquecimientos)
 
-La carga está integrada en `scripts/process_data.py` (no se requiere script adicional). Ejemplos:
+La ingesta y primeros derivados se ejecutan con `scripts/process_data.py`. Se implementó autodetección de rutas para edificios, amenidades y el tile SRTM (`*.hgt`).
 
+#### 4.1 Comando mínimo (ingesta OSM autodetectada)
 ```powershell
-# Host Windows (rutas locales)
-python laboratorio_integrador\scripts\process_data.py --load-osm ^
-    --buildings laboratorio_integrador\data\raw\osm_buildings.geojson ^
-    --amenities laboratorio_integrador\data\raw\osm_amenities.geojson ^
-    --schema raw_data ^
-    --srid 32719
-
-# Dentro del contenedor Jupyter
-docker exec -it jupyter_lab python /home/jovyan/scripts/process_data.py --load-osm \
-    --buildings /home/jovyan/data/raw/osm_buildings.geojson \
-    --amenities /home/jovyan/data/raw/osm_amenities.geojson \
-    --schema raw_data \
-    --srid 32719
+python scripts/process_data.py --load-osm --srid 32719 --index
 ```
 
-Verificación de carga:
+#### 4.2 Especificar rutas manuales (PowerShell)
+Usar backtick `` ` `` para continuar línea (no usar `^` en PowerShell):
+```powershell
+python scripts/process_data.py --load-osm `
+    --buildings data/raw/osm_buildings.geojson `
+    --amenities data/raw/osm_amenities.geojson `
+    --schema raw_data `
+    --srid 32719 `
+    --index
+```
+Una sola línea equivalente:
+```powershell
+python scripts/process_data.py --load-osm --buildings data/raw/osm_buildings.geojson --amenities data/raw/osm_amenities.geojson --schema raw_data --srid 32719 --index
+```
+
+#### 4.3 Dentro del contenedor Jupyter
+```bash
+docker exec -it jupyter_lab python /home/jovyan/scripts/process_data.py --load-osm \
+    --schema raw_data \
+    --srid 32719 --index
+```
+Si los archivos están en `/home/jovyan/data/raw/` no hace falta indicar rutas.
+
+#### 4.4 Derivados del DEM (slope/aspect)
+```powershell
+python scripts/process_data.py --dem-derivatives
+```
+Combinar ingesta OSM y derivados:
+```powershell
+python scripts/process_data.py --load-osm --srid 32719 --index --dem-derivatives
+```
+Genera:
+- `data/raw/srtm_dem.tif`
+- `data/raw/srtm_dem_32719.tif`
+- `data/processed/slope.tif`
+- `data/processed/aspect.tif`
+
+#### 4.5 Flags futuros (pendientes)
+Los siguientes flags ya están añadidos en la CLI. Algunos requieren que existan previamente los archivos de entrada en `data/raw/`.
+
+| Flag | Entrada esperada | Salida en `data/processed/` | Descripción |
+|------|------------------|------------------------------|-------------|
+| `--ndvi` | `sentinel_B04.tif`, `sentinel_B08.tif` | `sentinel2_ndvi.tif`, `sentinel2_ndvi_<SRID>.tif` | Calcula NDVI y reproyecta si se usa `--srid` |
+| `--join-censo` | Carpeta `Censo2017_ManzanaEntidad_CSV/` y `manzanas_censales.geojson` | `manzanas_atributos.geojson` | Une microdatos INE con geometrías de manzana (heurística de clave) |
+| `--join-uso-suelo` | `uso_suelo_minvu.geojson`, `manzanas_censales.geojson` | `manzanas_uso_suelo.geojson` | Intersecta para obtener área zonificada y conteo de zonas |
+| `--metrics` | Manzanas, edificios, amenidades + (opcional joins previos) | `metrics_manzanas.csv` | Conteos de edificios, amenidades, área y agrega atributos disponibles |
+
+Ejemplos de ejecución:
+```powershell
+# NDVI (si existen bandas Sentinel-2)
+python scripts/process_data.py --ndvi --srid 32719
+
+# Join Censo y Uso Suelo en una sola corrida
+python scripts/process_data.py --join-censo --join-uso-suelo
+
+# Métricas luego de haber generado los joins previos
+python scripts/process_data.py --metrics
+
+# Pipeline combinado OSM + DEM + Censo + Uso Suelo + Métricas
+python scripts/process_data.py --load-osm --dem-derivatives --join-censo --join-uso-suelo --metrics --srid 32719 --index
+```
+
+Consideraciones:
+- Si un archivo de salida ya existe se reutiliza para mantener idempotencia.
+- `--join-censo` intenta detectar automáticamente la columna clave (ej. `MANZENT`). Si no la encuentra, selecciona la primera columna común; revisar log si falta alguna variable.
+- `--join-uso-suelo` agrega columnas `area_zonas` y `zonas_count` al resultado por manzana.
+- `--metrics` agrega columnas de conteo y área; si existen outputs de censo y uso suelo los incorpora mediante join.
+
+#### 4.6 Extensiones recientes (NDVI flexible, uso suelo unificado, red vial, catálogo raster)
+
+Se han incorporado nuevas capacidades al script `scripts/process_data.py` para enriquecer el pipeline:
+
+| Flag | Entradas Clave | Salidas | Detalles |
+|------|----------------|---------|----------|
+| `--unify-uso-suelo` | Shapefiles en `data/raw/uso_suelo_minvu/**` (PRC*, PRMS*, LU*) | `uso_suelo_unificado.geojson` | Unifica múltiples fuentes, normaliza campo `categoria` y agrega `source`|
+| `--network-metrics` | `osm_network.graphml`, `manzanas_censales.geojson` | `network_nodes_metrics.geojson`, `network_metrics.csv` | Centralidades (degree, betweenness) y densidad vial por manzana |
+| `--ndvi` | Bandas B04/B08 (nombres soportados) | `sentinel2_ndvi.tif`, `sentinel2_ndvi_<SRID>.tif` | Detección flexible nombres: `sentinel_B04/B08`, `sentinel2_B04/B08`, fallback `*_B04/_B08` |
+| `--ingest-processed` | Archivos en `data/processed` | Tablas en esquema `processed_data` + `raster_catalog` | Carga `.geojson` y `.csv`; cataloga metadatos `.tif` |
+
+Detección flexible NDVI:
+1. Busca pares exactos (`sentinel_B04.tif`, `sentinel_B08.tif`).
+2. Luego (`sentinel2_B04.tif`, `sentinel2_B08.tif`).
+3. Fallback: primer par que cumpla patrón genérico `*_B04.tif` y `*_B08.tif`.
+Si dimensiones o transform difieren se aborta para evitar NDVI inválido.
+
+Catálogo raster (`processed_data.raster_catalog`):
+- Se crea automáticamente al ejecutar `--ingest-processed` si existen `.tif` en `data/processed`.
+- Guarda metadatos (crs, ancho/alto, bounds, transform, nodata, dtype, band_count) para reproducibilidad.
+- No almacena los píxeles en la base (optimiza espacio); el filesystem sigue siendo fuente de verdad.
+
+Consulta rápida en contenedor PostGIS:
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT filename, crs, width, height, band_count FROM processed_data.raster_catalog;"
+```
+
+En Windows PowerShell local (si tienes `psql` instalado):
+```powershell
+psql -h localhost -p 5432 -U geouser -d geodatabase -c "SELECT * FROM processed_data.raster_catalog LIMIT 5;"
+```
+Nota: No ejecutes `SELECT ...` directamente en PowerShell sin `psql -c`; PowerShell interpretará `SELECT` como comando de su propio pipeline.
+
+#### 4.7 Tabla de trazabilidad Raw → Processed
+
+| Archivo Raw | Tipo | Transformación / Acción | Archivo(s) Processed | Flag / Paso |
+|-------------|------|-------------------------|----------------------|-------------|
+| `osm_buildings.geojson` | Vector | Reproyección opcional, ingesta PostGIS | (tabla `raw_data.osm_buildings`) | `--load-osm` |
+| `osm_amenities.geojson` | Vector | Reproyección opcional, ingesta PostGIS | (tabla `raw_data.osm_amenities`) | `--load-osm` |
+| `osm_network.graphml` | Grafo | Parse nodos/aristas, reproyección | `network_nodes_metrics.geojson`, `network_metrics.csv` | `--network-metrics` |
+| `manzanas_censales.geojson` | Vector | Base para joins y métricas | `manzanas_atributos.geojson`, `manzanas_uso_suelo.geojson`, `metrics_manzanas.csv` | `--join-censo`, `--join-uso-suelo`, `--metrics` |
+| Censo CSV (`Censo2017_Manzanas.csv`) | Tabular | Limpieza separador y normalización clave | `manzanas_atributos.geojson` | `--join-censo` |
+| Uso suelo (PRC*, PRMS*, LU*) | Vector | Unificación + normalización categorías | `uso_suelo_unificado.geojson` | `--unify-uso-suelo` |
+| `uso_suelo_minvu.geojson` | Vector | Intersección con manzanas | `manzanas_uso_suelo.geojson` | `--join-uso-suelo` |
+| `S34W071.hgt` | Raster | Conversión HGT→GeoTIFF, recorte comuna, reproyección | `srtm_dem.tif`, `srtm_dem_32719.tif`, `slope.tif`, `aspect.tif` | `--dem-derivatives` |
+| Bandas Sentinel (B04/B08) | Raster | Cálculo NDVI + reproyección | `sentinel2_ndvi.tif`, `sentinel2_ndvi_<SRID>.tif` | `--ndvi` |
+
+Reglas de almacenamiento:
+- `data/raw/`: sólo fuentes originales sin modificación (HGT, GraphML, shapefiles, GeoJSON base, bandas).
+- `data/processed/`: productos derivados, agregados, reproyectados, enriquecidos o normalizados.
+- Evitar copiar archivos sin transformación a `processed/` para no duplicar almacenamiento; usar tabla de trazabilidad para referencia.
+- Rasters derivados se catalogan en `processed_data.raster_catalog` al ejecutar `--ingest-processed`.
+
+Ejemplo de pipeline completo (incluyendo catalogación raster):
+```powershell
+python scripts/process_data.py \
+    --load-osm --dem-derivatives --ndvi --join-censo --join-uso-suelo \
+    --metrics --unify-uso-suelo --network-metrics --srid 32719
+python scripts/process_data.py --ingest-processed --processed-schema processed_data
+```
+
+#### 4.8 Ingesta mínima de fuentes base
+
+La bandera `--ingest-minimum` carga en PostGIS las fuentes originales mínimas (límite oficial, manzanas censales, uso_suelo_minvu consolidado, microdatos censo) y cataloga los rasters base (DEM y bandas Sentinel) sin mover píxeles a la base.
+
+Acciones:
+- Vectoriales → tablas (`comuna_boundaries_oficial`, `manzanas_censales`, `uso_suelo_minvu`).
+- Microdatos censo → tabla `censo_microdatos` (primeras columnas para ligereza).
+- Rasters base → filas en `{schema}.raster_catalog` con `source_group='raw'`.
+
+Comando recomendado (añade índices y reproyección):
+```powershell
+python scripts/process_data.py --ingest-minimum --srid 32719 --index
+```
+Luego ejecutar derivados y productos y cargarlos al esquema de procesados:
+```powershell
+python scripts/process_data.py --dem-derivatives --ndvi --join-censo --join-uso-suelo --metrics --unify-uso-suelo --network-metrics --srid 32719
+python scripts/process_data.py --ingest-processed --processed-schema processed_data
+```
+
+Verificación rápida de métricas:
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) FROM processed_data.metrics_manzanas;"
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT AVG(ndvi_mean) FROM processed_data.metrics_manzanas;"
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT AVG(road_density_m_per_km2) FROM processed_data.network_metrics;"
+```
+
+#### 4.8.1 Validación de claves huérfanas (Censo ↔ Manzanas) y cobertura
+
+Objetivo: comprobar qué microdatos del censo no encuentran geometría y la cobertura (%) de manzanas con atributos censales / métricas derivadas.
+
+1. Listar columnas disponibles en la tabla de microdatos (para confirmar nombre real de la clave):
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT column_name FROM information_schema.columns WHERE table_schema='raw_data' AND table_name='censo_microdatos';"
+```
+
+2. Contar total de registros y total de manzanas:
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS total_microdatos FROM raw_data.censo_microdatos;"
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS total_manzanas FROM raw_data.manzanas_censales;"
+```
+
+3. Detección de claves huérfanas (usa COALESCE para variantes comunes de la clave):
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS microdatos_sin_geometria FROM raw_data.censo_microdatos c LEFT JOIN raw_data.manzanas_censales m ON COALESCE(c.manzent::text, c.id_manzent::text, c.mz_ent::text, c.manzana::text) = m.manzent::text WHERE m.manzent IS NULL;"
+```
+
+4. Proporción de microdatos que sí tienen geometría:
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT ROUND(100.0*COUNT(*)/(SELECT COUNT(*) FROM raw_data.censo_microdatos),2) AS pct_microdatos_con_geometria FROM raw_data.censo_microdatos c JOIN raw_data.manzanas_censales m ON COALESCE(c.manzent::text, c.id_manzent::text, c.mz_ent::text, c.manzana::text) = m.manzent::text;"
+```
+
+5. Cobertura de manzanas con atributos censales en producto procesado (`manzanas_atributos`):
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT ROUND(100.0*COUNT(*)/(SELECT COUNT(*) FROM processed_data.manzanas_atributos),2) AS pct_manzanas_con_microdatos FROM processed_data.manzanas_atributos WHERE manzent IS NOT NULL;"
+```
+
+6. Estadísticos NDVI para validar rango esperado (solo valores no nulos):
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT MIN(ndvi_mean), MAX(ndvi_mean), AVG(ndvi_mean) FROM processed_data.metrics_manzanas WHERE ndvi_mean IS NOT NULL;"
+```
+
+7. (Opcional) Crear vista con clave canónica para futuras consultas:
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "CREATE OR REPLACE VIEW raw_data.censo_microdatos_canon AS SELECT COALESCE(manzent, id_manzent, mz_ent, manzana) AS manzent_canon, * FROM raw_data.censo_microdatos;"
+```
+
+Notas:
+- No usar barras invertidas `\"` en PowerShell: simplemente encierra todo el SQL entre comillas dobles.
+- Si la columna aparece como `ID_MANZENT` o `MZ_ENT`, el script de ingest mínima la normaliza a `MANZENT` (nuevo ajuste). Si aún no existe, usar la variante adecuada en COALESCE.
+- Postgres convierte identificadores no entrecomillados a minúsculas; `MANZENT` y `manzent` son equivalentes si no se usan comillas dobles alrededor del nombre.
+- El CSV original del censo trae a veces espacios finales en los headers (ej. `PUEBLO  `). El script ahora limpia (strip) todos los nombres y unifica la clave a `MANZENT` cuando encuentra alias (`ID_MANZENT`, `MZ_ENT`, `MANZANA`). Si ves ambas columnas `MZ_ENT` y `MANZENT`, la primera se dejó porque ya existía la segunda antes de normalizar.
+
+### Buenas Prácticas de Reproducibilidad
+- Mantener `.env` con variables de conexión; no subir credenciales reales.
+- Ejecutar scripts con flags explícitos para poder reconstruir outputs.
+- Versionar sólo derivados compactos; evitar subir tiles raster gigantes si no cambian.
+- Usar logs para verificar idempotencia ("ya existe, reutilizando").
+
+---
+
+Sigue la documentación original abajo para fases analíticas avanzadas.
+
+#### Verificación de carga OSM
 ```powershell
 docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS edificios FROM raw_data.osm_buildings;"
 docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS amenidades FROM raw_data.osm_amenities;"
 ```
-Para confirmar SRID:
+Confirmar SRID:
 ```powershell
 docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT 'osm_buildings' AS tabla, Find_SRID('raw_data','osm_buildings','geometry') UNION ALL SELECT 'osm_amenities', Find_SRID('raw_data','osm_amenities','geometry');"
 ```
 Notas:
 - Si omites `--srid` se conserva el CRS original.
 - Esquema destino por defecto: `raw_data`.
+- Autodetección busca `data/raw/osm_buildings.geojson` y `data/raw/osm_amenities.geojson`.
+- Para red vial `.graphml` la ingesta aún es un placeholder.
 
 ### Acceso a Jupyter Lab
 
