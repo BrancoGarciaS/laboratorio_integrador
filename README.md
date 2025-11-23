@@ -469,6 +469,76 @@ Notas:
 - Postgres convierte identificadores no entrecomillados a minúsculas; `MANZENT` y `manzent` son equivalentes si no se usan comillas dobles alrededor del nombre.
 - El CSV original del censo trae a veces espacios finales en los headers (ej. `PUEBLO  `). El script ahora limpia (strip) todos los nombres y unifica la clave a `MANZENT` cuando encuentra alias (`ID_MANZENT`, `MZ_ENT`, `MANZANA`). Si ves ambas columnas `MZ_ENT` y `MANZENT`, la primera se dejó porque ya existía la segunda antes de normalizar.
 
+#### 4.8.2 NDVI y Métricas Zonales
+
+El NDVI se genera con el flag `--ndvi` usando bandas B04 (red) y B08 (nir). Se soportan nombres:
+`sentinel_B04.tif` / `sentinel_B08.tif`, `sentinel2_B04.tif` / `sentinel2_B08.tif`, o cualquier par `*_B04.tif` y `*_B08.tif` (fallback).
+
+Comando de generación (reproyecta si se entrega `--srid`):
+```powershell
+python scripts/process_data.py --ndvi --srid 32719
+```
+Salida:
+- `data/processed/sentinel2_ndvi.tif`
+- `data/processed/sentinel2_ndvi_32719.tif` (si se solicitó reproyección)
+
+Registro en catálogo: al existir `raw_data.raster_catalog` se inserta metadato con `source_group='derived'`.
+
+Para agregar la media de NDVI por manzana (estadística zonal) ejecutar luego:
+```powershell
+python scripts/process_data.py --metrics --srid 32719
+```
+Si el NDVI ya existía, la función lo reutiliza. La columna resultante en `metrics_manzanas.csv` es `ndvi_mean`.
+
+Validación rápida de rango típico NDVI (-1 a 1):
+```powershell
+docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT MIN(ndvi_mean), MAX(ndvi_mean), AVG(ndvi_mean) FROM processed_data.metrics_manzanas WHERE ndvi_mean IS NOT NULL;"
+```
+
+#### 4.8.3 Registro y Manejo de Fila Huérfana del Censo
+
+Se detectó una fila huérfana (microdato sin geometría asociada) con clave:
+```
+MANZENT = 13129991999999
+```
+Patrón sugiere código especial (relleno / fuera de límite). Recomendación: excluir esta fila en análisis estadísticos y mapas para evitar sesgos.
+
+SQL para excluirla en consultas posteriores:
+```sql
+SELECT * FROM raw_data.censo_microdatos WHERE manzent <> '13129991999999';
+```
+
+Python (GeoPandas/Pandas) al cargar atributos:
+```python
+df = df[df['manzent'] != '13129991999999']
+```
+
+Si aparecieran más casos, generar reporte actualizado:
+```powershell
+python scripts/report_orphans.py --output data/processed/orphans_microdatos.csv
+```
+
+#### 4.8.4 DEM Copernicus (Opcional)
+
+Si se añade archivo `copernicus_dem.tif` (o se descarga vía flujo externo), se puede ejecutar reproyección y cálculo de derivados para comparar calidad vs SRTM:
+```powershell
+python scripts/process_data.py --dem-derivatives --srid 32719
+```
+El script intentará crear `copernicus_dem_32719.tif` y reutilizar derivados si ya existen `slope.tif` / `aspect.tif`. Para mantener trazabilidad, documentar en el catálogo raster la procedencia (`source_group='raw'` para DEM base Copernicus, `source_group='derived'` para derivados).
+
+Comparación rápida de estadísticas básicas entre DEMs (en Python interactivo):
+```python
+import rasterio, numpy as np
+for f in ["data/raw/srtm_dem_32719.tif", "data/raw/copernicus_dem_32719.tif"]:
+    if not Path(f).exists():
+        print("Falta", f); continue
+    with rasterio.open(f) as src:
+        arr = src.read(1, masked=True)
+        print(f, "min", float(np.nanmin(arr)), "max", float(np.nanmax(arr)), "mean", float(np.nanmean(arr)))
+```
+
+Justificación opcional en informe: Copernicus GLO-30 suele ofrecer menor ruido y mayor cobertura homogénea; comparar histograma y pendiente media puede apoyar elección final de DEM para análisis topográfico avanzado.
+
 ### Buenas Prácticas de Reproducibilidad
 - Mantener `.env` con variables de conexión; no subir credenciales reales.
 - Ejecutar scripts con flags explícitos para poder reconstruir outputs.

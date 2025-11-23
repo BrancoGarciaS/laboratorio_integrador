@@ -514,6 +514,21 @@ def generate_ndvi(args):
     raw_dir = Path('data/raw')
     processed_dir = Path('data/processed')
     processed_dir.mkdir(exist_ok=True)
+    # Normalizar nombres legacy -> estándar (sentinel2_*)
+    legacy_b04 = raw_dir / 'sentinel_B04.tif'
+    legacy_b08 = raw_dir / 'sentinel_B08.tif'
+    std_b04 = raw_dir / 'sentinel2_B04.tif'
+    std_b08 = raw_dir / 'sentinel2_B08.tif'
+    import shutil
+    try:
+        if legacy_b04.exists() and not std_b04.exists():
+            shutil.copy(legacy_b04, std_b04)
+            logger.info('Copiado sentinel_B04.tif -> sentinel2_B04.tif')
+        if legacy_b08.exists() and not std_b08.exists():
+            shutil.copy(legacy_b08, std_b08)
+            logger.info('Copiado sentinel_B08.tif -> sentinel2_B08.tif')
+    except Exception as e:
+        logger.warning(f'No se pudo copiar bandas legacy: {e}')
     # Intentos ordenados de detección
     candidates = [
         (raw_dir / 'sentinel_B04.tif', raw_dir / 'sentinel_B08.tif'),
@@ -547,6 +562,34 @@ def generate_ndvi(args):
             with rasterio.open(out_ndvi, 'w', **meta) as dst:
                 dst.write(ndvi, 1)
         logger.info(f'Escrito {out_ndvi}')
+        # Registrar en raster_catalog si existe
+        try:
+            user = os.getenv('POSTGRES_USER'); pwd = os.getenv('POSTGRES_PASSWORD')
+            host = os.getenv('POSTGRES_HOST','localhost'); port = os.getenv('POSTGRES_PORT','5432')
+            db = os.getenv('POSTGRES_DB')
+            engine_local = create_engine(f'postgresql://{user}:{pwd}@{host}:{port}/{db}')
+            with engine_local.begin() as conn:
+                exists = conn.execute(text("SELECT to_regclass('raw_data.raster_catalog')")).scalar()
+                if exists:
+                    with rasterio.open(out_ndvi) as src:
+                        meta_insert = {
+                            'filename': out_ndvi.name,
+                            'crs': str(src.crs),
+                            'width': src.width,
+                            'height': src.height,
+                            'band_count': src.count,
+                            'dtype': src.dtypes[0],
+                            'transform': str(src.transform),
+                            'bounds': str(src.bounds),
+                            'nodata': str(src.nodata),
+                            'source_group': 'derived'
+                        }
+                        conn.execute(text(
+                            "INSERT INTO raw_data.raster_catalog (filename, crs, width, height, band_count, dtype, transform, bounds, nodata, source_group) VALUES (:filename,:crs,:width,:height,:band_count,:dtype,:transform,:bounds,:nodata,:source_group) ON CONFLICT (filename) DO NOTHING"
+                        ), meta_insert)
+                        logger.info('NDVI registrado en raster_catalog.')
+        except Exception as e:
+            logger.debug(f'No se pudo registrar NDVI en raster_catalog: {e}')
     else:
         logger.info('NDVI ya existe, reutilizando.')
     if getattr(args, 'srid', None):
