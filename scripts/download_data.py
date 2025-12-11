@@ -1136,8 +1136,6 @@ class DataDownloader:
         # 1. Forzar encoding correcto
         df_com = self._safe_read_csv(comunas_csv)
 
-
-
         # 2. Normalizar entrada
         comuna_user_norm = self._normalize(comuna_name)
 
@@ -1194,12 +1192,6 @@ class DataDownloader:
         logger.info(f"Archivo filtrado guardado en {manzanas_csv}")
 
         return True
-
-
-
-
-
-
 
 @click.command()
 @click.option('--comuna', required=True, help='Nombre de la comuna')

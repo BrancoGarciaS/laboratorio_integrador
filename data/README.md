@@ -60,6 +60,9 @@ python scripts/download_data.py --comuna "San Joaquin" --sources all --debug
 Descarga censo + microdatos (activando flujo nuevo):
 ```
 python scripts/download_data.py --comuna "San Joaquin" --sources censo --debug
+
+python scripts/download_data.py --comuna "San Joaquín" --sources ine_censo2017 --debug
+
 ```
 
 Descarga sólo OSM + SRTM + Sentinel-2:
