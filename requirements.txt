@@ -41,3 +41,5 @@ planetary-computer>=1.0.0
 
 # Archive extraction
 rarfile>=4.0
+
+shap
