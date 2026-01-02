@@ -52,8 +52,7 @@ with st.sidebar:
     st.markdown("### 📊 Navegación")
     page = st.selectbox(
         "Seleccione una sección:",
-        ["🏠 Inicio", "📊 Datos", "🗺️ Análisis Espacial",
-         "🤖 Machine Learning", "📈 Resultados"]
+        ["🏠 Inicio", "📊 Datos", "🗺️ Análisis Espacial", "🤖 Machine Learning", "📈 Resultados"]
     )
 
     st.markdown("---")
@@ -70,6 +69,8 @@ with st.sidebar:
 
 # Contenido principal según página seleccionada
 if page == "🏠 Inicio":
+
+    '''
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -104,7 +105,13 @@ if page == "🏠 Inicio":
     # Mostrar mapa
     st_folium(m, height=500, width=None, returned_objects=["last_clicked"])
 
+    '''
+    st.switch_page("pages/inicio.py")
+
+
 elif page == "📊 Datos":
+
+    '''
     st.header("📊 Exploración de Datos")
 
     tab1, tab2, tab3 = st.tabs(["📋 Resumen", "📈 Estadísticas", "🗂️ Metadatos"])
@@ -143,8 +150,13 @@ elif page == "📊 Datos":
             'crs': 'EPSG:32719',
             'formato_datos': ['GeoJSON', 'Shapefile', 'GeoTIFF', 'CSV']
         })
+        '''
+    
+    st.switch_page("pages/datos.py")
 
 elif page == "🗺️ Análisis Espacial":
+
+    '''
     st.header("🗺️ Análisis Espacial")
 
     col1, col2 = st.columns([2, 1])
@@ -160,8 +172,11 @@ elif page == "🗺️ Análisis Espacial":
         st.metric("Moran's I Global", "0.642", "Alto clustering")
         st.metric("P-value", "0.001", "Significativo")
         st.metric("Z-score", "15.23", "")
+    '''
+    st.switch_page("pages/analisis_espacial.py")
 
 elif page == "🤖 Machine Learning":
+    '''
     st.header("🤖 Modelos de Machine Learning")
 
     model_type = st.selectbox(
@@ -189,7 +204,13 @@ elif page == "🤖 Machine Learning":
         with st.spinner("Entrenando modelo..."):
             st.success("Modelo entrenado exitosamente!")
 
+                '''
+    
+    st.switch_page("pages/machine_learning.py")
+
 elif page == "📈 Resultados":
+
+    '''
     st.header("📈 Síntesis de Resultados")
 
     st.markdown("""
@@ -209,10 +230,13 @@ elif page == "📈 Resultados":
     # Botón de descarga
     st.download_button(
         label="📥 Descargar Informe Completo (PDF)",
-        data=b"Contenido del PDF aquí",
+        data= "Contenido del PDF aquí",
         file_name="informe_analisis_territorial.pdf",
         mime="application/pdf"
     )
+    '''
+
+    st.switch_page("pages/resultados.py")
 
 # Footer
 st.markdown("---")
