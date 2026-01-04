@@ -1,0 +1,12 @@
+plotly
+streamlit
+pillow       
+pandas
+rasterio
+geopandas
+joblib
+matplotlib
+numpy
+folium
+streamlit-folium
+python-dotenv

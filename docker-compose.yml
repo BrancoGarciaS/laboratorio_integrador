@@ -56,6 +56,16 @@ services:
       - postgis
     restart: unless-stopped
 
+  webserver:
+    build: ./docker/web
+    volumes:
+      - ./app:/app
+      - ./outputs:/outputs
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgis
+
 volumes:
   postgres_data:
   pgadmin_data:
