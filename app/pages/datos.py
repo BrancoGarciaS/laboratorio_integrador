@@ -33,3 +33,16 @@ nombre_imagen = st.text_input(
 
 if nombre_imagen:
     load_image(nombre_imagen)
+
+
+# Tabla de master
+if "gdf_master" not in st.session_state:
+    st.error("No se encontró gdf_master. Vuelve a la página principal primero.")
+else:
+    gdf_master = st.session_state["gdf_master"]
+
+    st.write("Filas:", len(gdf_master))
+    st.dataframe(
+        gdf_master.drop(columns="geometry").head(100),
+        use_container_width=True
+    )

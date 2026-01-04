@@ -2,6 +2,7 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import os
+import plotly.express as px
 
 def show_inicio():
 
@@ -28,10 +29,12 @@ def show_inicio():
 
     folium.Marker(
         [-33.5, -70.6167],
-        popup="Centro de San Joaquín",
-        tooltip="San Joaquín"
+        popup="Centro de la Comuna",
+        tooltip="Click para más info",
+        icon=folium.Icon(icon="info-sign", color="red")
     ).add_to(m)
 
     st_folium(m, height=500)
+    
 
 show_inicio()

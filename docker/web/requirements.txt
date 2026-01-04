@@ -10,3 +10,6 @@ numpy
 folium
 streamlit-folium
 python-dotenv
+psycopg2-binary 
+sqlalchemy   
+plotly
