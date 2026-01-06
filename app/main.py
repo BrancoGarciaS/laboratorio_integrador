@@ -125,43 +125,51 @@ with st.sidebar:
 # Contenido principal según página seleccionada
 if page == "🏠 Inicio":
 
-    '''
+    
+
+    st.title("🗺️ Sistema de Análisis Territorial")
+    st.markdown(f"### Comuna: {os.getenv('COMUNA_NAME', 'No configurada')}")
+
     col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric("Área Total", "125.4 km²", "+2.3%")
-
-    with col2:
-        st.metric("Población", "245,678", "+5.2%")
-
-    with col3:
-        st.metric("Densidad", "1,958 hab/km²", "+2.8%")
+    col1.metric("Área Total", "9.70 km²")
+    col2.metric("Población", "94.46K hab")
+    col3.metric("Densidad", f"{round(94460/9.7, 1)} hab/km²")
 
     st.markdown("---")
-
-    # Mapa principal
     st.subheader("📍 Ubicación de la Comuna")
 
-    # Crear mapa con Folium
     m = folium.Map(
-        location=[-33.45, -70.65],  # Santiago
-        zoom_start=11,
-        tiles='OpenStreetMap'
+        location=[-33.5, -70.6167],
+        zoom_start=13,
+        tiles="OpenStreetMap"
     )
 
-    # Agregar marcador
     folium.Marker(
-        [-33.45, -70.65],
+        [-33.5, -70.6167],
         popup="Centro de la Comuna",
         tooltip="Click para más info",
         icon=folium.Icon(icon="info-sign", color="red")
     ).add_to(m)
 
-    # Mostrar mapa
-    st_folium(m, height=500, width=None, returned_objects=["last_clicked"])
+    st_folium(m, height=500, width=800)
 
-    '''
-    st.switch_page("pages/inicio.py")
+    # Dataset
+    df = st.session_state["gdf_master"]
+
+    st.markdown("---")
+    st.subheader("📊 Exploración de Variables")
+
+    # Opciones de conjuntos de columnas que sí existen
+    options = {
+        "Demografía": ["manzent", "total_personas", "total_hombres", "total_mujeres", "edad_15a64", "edad_65ymas"],
+        "Vivienda": ["manzent", "total_viviendas", "cantidad_hogares", "viv_part", "viv_col"],
+        "Red vial y morfología": ["manzent", "area_m2", "road_length_m", "road_density_km2", "num_edificios", "num_amenidades"]
+    }
+
+    choice = st.selectbox("Seleccione el conjunto de variables a mostrar:", list(options.keys()))
+
+    st.dataframe(df[options[choice]])
+
 
 
 elif page == "📊 Datos":
@@ -231,36 +239,6 @@ elif page == "🗺️ Análisis Espacial":
     st.switch_page("pages/analisis_espacial.py")
 
 elif page == "🤖 Machine Learning":
-    '''
-    st.header("🤖 Modelos de Machine Learning")
-
-    model_type = st.selectbox(
-        "Seleccione el modelo:",
-        ["Random Forest", "XGBoost", "Red Neuronal"]
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Parámetros del Modelo")
-
-        if model_type == "Random Forest":
-            n_estimators = st.slider("Número de árboles:", 10, 500, 100)
-            max_depth = st.slider("Profundidad máxima:", 1, 20, 5)
-            min_samples_split = st.slider("Min samples split:", 2, 20, 2)
-
-    with col2:
-        st.subheader("Métricas de Rendimiento")
-        st.metric("R² Score", "0.872")
-        st.metric("RMSE", "12.34")
-        st.metric("MAE", "8.76")
-
-    if st.button("🚀 Entrenar Modelo"):
-        with st.spinner("Entrenando modelo..."):
-            st.success("Modelo entrenado exitosamente!")
-
-                '''
-    
     st.switch_page("pages/machine_learning.py")
 
 elif page == "📈 Resultados":

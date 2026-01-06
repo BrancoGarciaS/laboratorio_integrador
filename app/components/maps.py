@@ -104,20 +104,9 @@ def add_raster_layer(m, raster_name, layer_name, cmap="viridis"):
     return arr 
 
 
-def plot_raster_histogram(arr, layer_name, cmap="viridis", bins=50):
+def plot_raster_histogram(arr, layer_name, cmap="viridis", bins=30, normalize=True):
     """
-    Genera un histograma de valores de un raster con el colormap aplicado.
-    
-    Parameters
-    ----------
-    arr : np.ndarray
-        Matriz de valores del raster (con NaN en nodata).
-    layer_name : str
-        Nombre de la capa para el título.
-    cmap : str
-        Nombre del colormap de matplotlib.
-    bins : int
-        Número de bins para el histograma.
+    Genera un histograma compacto de valores de un raster con colormap aplicado.
     """
     # Filtrar valores válidos
     vals = arr[~np.isnan(arr)]
@@ -129,15 +118,22 @@ def plot_raster_histogram(arr, layer_name, cmap="viridis", bins=50):
     norm_vals = (edges[:-1] - vals.min()) / (vals.max() - vals.min())
     colors = plt.get_cmap(cmap)(norm_vals)
     
-    # Graficar
-    fig, ax = plt.subplots(figsize=(6,4))
+    # Si se pide normalizar, convertir a proporciones
+    if normalize:
+        counts = counts / counts.sum()
+    
+    # Graficar más compacto
+    fig, ax = plt.subplots(figsize=(4,3))
     ax.bar(edges[:-1], counts, width=np.diff(edges), color=colors, align="edge")
-    ax.set_title(f"Distribución de valores - {layer_name}")
-    ax.set_xlabel("Valor raster")
-    ax.set_ylabel("Frecuencia")
+    ax.set_title(f"Distribución de valores - {layer_name}", fontsize=10)
+    ax.set_xlabel("Valor raster", fontsize=9)
+    ax.set_ylabel("Frecuencia relativa" if normalize else "Frecuencia", fontsize=9)
+    ax.tick_params(axis='both', labelsize=8)
+    fig.tight_layout()
     
     # Mostrar en Streamlit
     st.pyplot(fig)
+
 
 
 def render_map(m):

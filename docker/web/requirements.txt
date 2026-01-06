@@ -13,3 +13,5 @@ python-dotenv
 psycopg2-binary 
 sqlalchemy   
 plotly
+scikit-learn
+xgboost
