@@ -14,7 +14,7 @@ gdf = st.session_state["gdf_master"]
 CENTER_LAT = -33.4926
 CENTER_LON = -70.6272
 
-st.subheader("📈 Gráficos Folium")
+st.subheader("📈 Gráfico Folium")
 m = folium.Map(
     location=[CENTER_LAT, CENTER_LON],
     zoom_start=14
@@ -27,10 +27,12 @@ folium.GeoJson(
 
 st_folium(m, height=600, width=1000)
 
-st.subheader("📈 Gráficos dinámicos con Plotly")
+st.subheader("📈 Gráfico dinámico con Plotly")
+
+df = st.session_state["gdf_master"]  # este sí tiene pop_density, ndvi_mean, slope_mean
 
 fig = px.scatter(
-    gdf,
+    df,
     x="pop_density",
     y="ndvi_mean",
     color="nom",
@@ -38,7 +40,6 @@ fig = px.scatter(
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
 
 summary = load_txt("moran_results.txt")
 
