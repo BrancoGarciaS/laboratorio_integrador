@@ -4,6 +4,7 @@ from components.loaders import load_txt, load_csv
 from components.charts import variogram_plot
 import folium
 from streamlit_folium import st_folium
+import plotly.express as px
 
 st.header("🗺️ Análisis de Autocorrelación Espacial")
 
@@ -13,6 +14,7 @@ gdf = st.session_state["gdf_master"]
 CENTER_LAT = -33.4926
 CENTER_LON = -70.6272
 
+st.subheader("📈 Gráficos Folium")
 m = folium.Map(
     location=[CENTER_LAT, CENTER_LON],
     zoom_start=14
@@ -25,6 +27,17 @@ folium.GeoJson(
 
 st_folium(m, height=600, width=1000)
 
+st.subheader("📈 Gráficos dinámicos con Plotly")
+
+fig = px.scatter(
+    gdf,
+    x="pop_density",
+    y="ndvi_mean",
+    color="nom",
+    hover_name="manzent"
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
 
 summary = load_txt("moran_results.txt")

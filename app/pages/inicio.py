@@ -3,6 +3,7 @@ import folium
 from streamlit_folium import st_folium
 import os
 import plotly.express as px
+from main import load_master
 
 def show_inicio():
 
@@ -35,6 +36,7 @@ def show_inicio():
     ).add_to(m)
 
     st_folium(m, height=500)
-    
+
+    st.dataframe(df_sel[['manzent','pop_density','ndvi_mean','slope_mean']])
 
 show_inicio()
