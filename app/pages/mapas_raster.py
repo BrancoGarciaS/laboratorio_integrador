@@ -1,7 +1,8 @@
 import streamlit as st
 from components.maps import base_map, add_raster_layer, render_map, plot_raster_histogram
+from components.sidebar import render_sidebar, sidebar_down
 
-# Mostrar raster .tif
+page = render_sidebar()
 
 st.header("🌍 Mapas Temáticos Raster - San Joaquín")
 
@@ -39,3 +40,4 @@ st.subheader("📊 Histogramas de capas raster")
 for arr, layer_name in hist_arrays:
     plot_raster_histogram(arr, layer_name)
 
+sidebar_down()

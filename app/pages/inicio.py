@@ -2,9 +2,22 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import os
+from components.dataset import load_master
+from components.sidebar import render_sidebar, sidebar_down
 
-st.title("🗺️ Sistema de Análisis Territorial")
-st.markdown(f"### Comuna: {os.getenv('COMUNA_NAME', 'No configurada')}")
+page = render_sidebar()
+
+# Revisar si ya existe en session_state
+if "gdf_master" not in st.session_state:
+    gdf_master = load_master()
+    st.success("Datos cargados correctamente desde PostGIS")
+    st.session_state["gdf_master"] = gdf_master
+else:
+    gdf_master = st.session_state["gdf_master"]
+
+COMUNA_NAME = "San Joaquín"
+
+st.markdown(f"### Comuna: {COMUNA_NAME}")
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Área Total", "9.70 km²")
@@ -45,3 +58,5 @@ options = {
 choice = st.selectbox("Seleccione el conjunto de variables a mostrar:", list(options.keys()))
 
 st.dataframe(df[options[choice]])
+
+sidebar_down()

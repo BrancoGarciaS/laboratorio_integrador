@@ -6,6 +6,9 @@ import folium
 from streamlit_folium import st_folium
 import plotly.express as px
 from components.figures import load_image
+from components.sidebar import render_sidebar, sidebar_down
+
+page = render_sidebar()
 
 st.header("🗺️ Análisis de Autocorrelación Espacial")
 
@@ -97,3 +100,24 @@ fig = px.scatter(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+
+'''
+    st.header("🗺️ Análisis Espacial")
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        st.subheader("Autocorrelación Espacial - Moran's I")
+
+        # Placeholder para gráfico
+        st.info("Aquí se mostrará el análisis de autocorrelación espacial")
+
+    with col2:
+        st.subheader("Métricas")
+        st.metric("Moran's I Global", "0.642", "Alto clustering")
+        st.metric("P-value", "0.001", "Significativo")
+        st.metric("Z-score", "15.23", "")
+    '''
+
+sidebar_down()

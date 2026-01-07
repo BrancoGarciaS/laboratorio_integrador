@@ -3,73 +3,17 @@ Aplicación web para visualización de análisis geoespacial.
 """
 
 import streamlit as st
-import pandas as pd
-import geopandas as gpd
-import folium
-from streamlit_folium import st_folium
-import plotly.express as px
-import plotly.graph_objects as go
-from pathlib import Path
-import os
-from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from components.dataset import load_master
 
-# Cargar variables de entorno
-load_dotenv()
 
-# Conexión con postgis
-@st.cache_resource
-def get_engine():
-    load_dotenv()
-    DB_USER = os.getenv('POSTGRES_USER', 'geouser')
-    DB_PASS = os.getenv('POSTGRES_PASSWORD', 'geopass')
-    DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
-    DB_PORT = os.getenv('POSTGRES_PORT', '5432')
-    DB_NAME = os.getenv('POSTGRES_DB', 'geodatabase')
+# Revisar si ya existe en session_state
+if "gdf_master" not in st.session_state:
+    gdf_master = load_master()
+    st.success("Datos cargados correctamente desde PostGIS")
+    st.session_state["gdf_master"] = gdf_master
+else:
+    gdf_master = st.session_state["gdf_master"]
 
-    engine = create_engine(
-        f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    )
-    return engine
-
-# Crear el dataset 
-@st.cache_data
-def load_master():
-    engine = get_engine()
-
-    gdf = gpd.read_postgis(
-        "SELECT * FROM processed_data.manzanas_atributos",
-        engine,
-        geom_col="geometry"
-    )
-
-    df_net = pd.read_sql("SELECT * FROM processed_data.metrics_network", engine)
-    df_env = pd.read_sql("SELECT * FROM processed_data.metrics_manzanas", engine)
-    df_usos = pd.read_sql("SELECT * FROM processed_data.manzanas_uso_suelo", engine)
-
-    df_usos = df_usos.drop_duplicates(subset="manzent")
-
-    # conversiones
-    for d in [gdf, df_net, df_env, df_usos]:
-        d["manzent"] = d["manzent"].astype(str)
-
-    # merge principal
-    gdf_master = gdf.merge(df_net, on="manzent", how="left")
-
-    cols_env = [c for c in df_env.columns if c not in gdf_master.columns and c != "manzent"]
-    gdf_master = gdf_master.merge(df_env[['manzent'] + cols_env], on="manzent", how="left")
-
-    gdf_master = gdf_master.merge(df_usos[['manzent','nom']], on="manzent", how="left")
-
-    gdf_master["nom"] = gdf_master["nom"].fillna("Sin clasificar")
-
-    return gdf_master
-
-gdf_master = load_master()
-st.success("Datos cargados correctamente desde PostGIS")
-
-# guardar para otras páginas
-st.session_state["gdf_master"] = gdf_master
 
 # Configuración de la página
 st.set_page_config(
@@ -97,7 +41,6 @@ st.markdown("""
 
 # Título principal
 st.title("🗺️ Sistema de Análisis Territorial")
-st.markdown(f"### Comuna: {os.getenv('COMUNA_NAME', 'No configurada')}")
 
 # Sidebar
 with st.sidebar:
@@ -124,151 +67,19 @@ with st.sidebar:
 
 # Contenido principal según página seleccionada
 if page == "🏠 Inicio":
-
-    
-
-    st.title("🗺️ Sistema de Análisis Territorial")
-    st.markdown(f"### Comuna: {os.getenv('COMUNA_NAME', 'No configurada')}")
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Área Total", "9.70 km²")
-    col2.metric("Población", "94.46K hab")
-    col3.metric("Densidad", f"{round(94460/9.7, 1)} hab/km²")
-
-    st.markdown("---")
-    st.subheader("📍 Ubicación de la Comuna")
-
-    m = folium.Map(
-        location=[-33.5, -70.6167],
-        zoom_start=13,
-        tiles="OpenStreetMap"
-    )
-
-    folium.Marker(
-        [-33.5, -70.6167],
-        popup="Centro de la Comuna",
-        tooltip="Click para más info",
-        icon=folium.Icon(icon="info-sign", color="red")
-    ).add_to(m)
-
-    st_folium(m, height=500, width=800)
-
-    # Dataset
-    df = st.session_state["gdf_master"]
-
-    st.markdown("---")
-    st.subheader("📊 Exploración de Variables")
-
-    # Opciones de conjuntos de columnas que sí existen
-    options = {
-        "Demografía": ["manzent", "total_personas", "total_hombres", "total_mujeres", "edad_15a64", "edad_65ymas"],
-        "Vivienda": ["manzent", "total_viviendas", "cantidad_hogares", "viv_part", "viv_col"],
-        "Red vial y morfología": ["manzent", "area_m2", "road_length_m", "road_density_km2", "num_edificios", "num_amenidades"]
-    }
-
-    choice = st.selectbox("Seleccione el conjunto de variables a mostrar:", list(options.keys()))
-
-    st.dataframe(df[options[choice]])
-
-
+    st.switch_page("pages/inicio.py")
 
 elif page == "📊 Datos":
-
-    '''
-    st.header("📊 Exploración de Datos")
-
-    tab1, tab2, tab3 = st.tabs(["📋 Resumen", "📈 Estadísticas", "🗂️ Metadatos"])
-
-    with tab1:
-        st.subheader("Fuentes de Datos Integradas")
-
-        data_sources = pd.DataFrame({
-            'Fuente': ['OpenStreetMap', 'INE', 'IDE Chile', 'Sentinel-2', 'SRTM DEM'],
-            'Tipo': ['Vectorial', 'Tabular', 'Vectorial', 'Raster', 'Raster'],
-            'Última Actualización': ['2024-01', '2023-12', '2024-01', '2024-01', '2023-06'],
-            'Estado': ['✅ Cargado', '✅ Cargado', '⏳ Pendiente', '⏳ Pendiente', '✅ Cargado']
-        })
-
-        st.dataframe(data_sources, use_container_width=True)
-
-    with tab2:
-        st.subheader("Estadísticas Descriptivas")
-
-        # Gráfico de ejemplo
-        fig = px.bar(
-            x=['Residencial', 'Comercial', 'Industrial', 'Áreas Verdes', 'Otros'],
-            y=[45, 20, 15, 12, 8],
-            labels={'x': 'Uso del Suelo', 'y': 'Porcentaje (%)'},
-            title='Distribución de Uso del Suelo'
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with tab3:
-        st.subheader("Metadatos del Proyecto")
-        st.json({
-            'proyecto': 'Laboratorio Integrador',
-            'version': '1.0.0',
-            'fecha_creacion': '2024-01-15',
-            'ultima_actualizacion': '2024-01-20',
-            'crs': 'EPSG:32719',
-            'formato_datos': ['GeoJSON', 'Shapefile', 'GeoTIFF', 'CSV']
-        })
-        '''
-    
     st.switch_page("pages/datos.py")
 
+
 elif page == "🗺️ Análisis Espacial":
-
-    '''
-    st.header("🗺️ Análisis Espacial")
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.subheader("Autocorrelación Espacial - Moran's I")
-
-        # Placeholder para gráfico
-        st.info("Aquí se mostrará el análisis de autocorrelación espacial")
-
-    with col2:
-        st.subheader("Métricas")
-        st.metric("Moran's I Global", "0.642", "Alto clustering")
-        st.metric("P-value", "0.001", "Significativo")
-        st.metric("Z-score", "15.23", "")
-    '''
     st.switch_page("pages/analisis_espacial.py")
 
 elif page == "🤖 Machine Learning":
     st.switch_page("pages/machine_learning.py")
 
 elif page == "📈 Resultados":
-
-    '''
-    st.header("📈 Síntesis de Resultados")
-
-    st.markdown("""
-    ### Hallazgos Principales
-
-    1. **Patrón espacial identificado**: Se detectó clustering significativo en las variables socioeconómicas
-    2. **Predicción exitosa**: El modelo ML alcanzó un R² de 0.87
-    3. **Zonas críticas**: Se identificaron 5 hot spots que requieren atención
-
-    ### Recomendaciones
-
-    - Implementar políticas focalizadas en las zonas identificadas
-    - Continuar monitoreo con imágenes satelitales actualizadas
-    - Expandir el análisis a comunas vecinas
-    """)
-
-    # Botón de descarga
-    st.download_button(
-        label="📥 Descargar Informe Completo (PDF)",
-        data= "Contenido del PDF aquí",
-        file_name="informe_analisis_territorial.pdf",
-        mime="application/pdf"
-    )
-    '''
-
     st.switch_page("pages/resultados.py")
 
 # Footer

@@ -6,6 +6,19 @@ from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from sklearn.neural_network import MLPRegressor
+from components.dataset import load_master
+from components.sidebar import render_sidebar, sidebar_down
+
+page = render_sidebar()
+
+# Revisar si ya existe en session_state
+if "gdf_master" not in st.session_state:
+    gdf_master = load_master()
+    st.success("Datos cargados correctamente desde PostGIS")
+    st.session_state["gdf_master"] = gdf_master
+else:
+    gdf_master = st.session_state["gdf_master"]
+
 
 st.header("🤖 Modelos de Machine Learning")
 
@@ -100,3 +113,5 @@ if st.button("🚀 Entrenar Modelo"):
         mae_placeholder.metric("MAE", f"{mae:.2f}")
 
         st.success("Modelo entrenado exitosamente!")
+
+sidebar_down()
