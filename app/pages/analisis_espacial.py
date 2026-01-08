@@ -23,7 +23,7 @@ st.header("🗺️ Análisis de Autocorrelación Espacial")
 
 st.subheader("Autocorrelación Espacial - Moran's I")
 
-# Histograma
+# moran
 nombre_imagen = st.text_input(
     "Scatterplot Moran - total personas",
     value="07_moran_scatterplot.png"
@@ -64,36 +64,29 @@ if nombre_imagen:
 
 st.subheader("📈 Variogramas Experimentales")
 
-# Cargar CSVs
-vario_ndvi = load_csv("variogram_experimental_ndvi_mean.csv")
-vario_pop_density = load_csv("variogram_experimental_pop_density.csv")
-vario_slope = load_csv("variogram_experimental_slope_mean.csv")
+nombre_imagen = st.text_input(
+    "Variograma - NDVI mean",
+    value="variogram_ndvi_mean.png"
+)
 
-# Renombrar columnas para que coincidan con lo que espera variogram_plot
-vario_ndvi = vario_ndvi.rename(columns={
-    "distance_bin_m": "distance",
-    "gamma": "semivariance"
-})
+if nombre_imagen:
+    load_image(nombre_imagen)
 
-vario_pop_density = vario_pop_density.rename(columns={
-    "distance_bin_m": "distance",
-    "gamma": "semivariance"
-})
+nombre_imagen = st.text_input(
+    "Variograma - POP density",
+    value="variogram_pop_density.png"
+)
 
-vario_slope = vario_slope.rename(columns={
-    "distance_bin_m": "distance",
-    "gamma": "semivariance"
-})
+if nombre_imagen:
+    load_image(nombre_imagen)
 
-# Graficar
-fig = variogram_plot(vario_ndvi, "Variograma NDVI Mean")
-st.plotly_chart(fig, use_container_width=True)
+nombre_imagen = st.text_input(
+    "Variograma - Slope mean",
+    value="variogram_slope_mean.png"
+)
 
-fig = variogram_plot(vario_pop_density, "Variograma POP DENSITY")
-st.plotly_chart(fig, use_container_width=True)
-
-fig = variogram_plot(vario_slope, "Variograma SLOPE Mean")
-st.plotly_chart(fig, use_container_width=True)
+if nombre_imagen:
+    load_image(nombre_imagen)
 
 df = st.session_state["gdf_master"]
 
