@@ -59,4 +59,26 @@ choice = st.selectbox("Seleccione el conjunto de variables a mostrar:", list(opt
 
 st.dataframe(df[options[choice]])
 
+# Gráfico folium
+
+gdf = st.session_state["gdf_master"]
+
+# Coordenadas aproximadas del centro de San Joaquín
+CENTER_LAT = -33.4926
+CENTER_LON = -70.6272
+
+st.subheader("📈 Gráfico Folium: Comuna")
+m = folium.Map(
+    location=[CENTER_LAT, CENTER_LON],
+    zoom_start=14
+)
+
+folium.GeoJson(
+    gdf,
+    tooltip=["manzent", "nom", "pop_density"]
+).add_to(m)
+
+st_folium(m, height=600, width=1000)
+
 sidebar_down()
+

@@ -3,6 +3,10 @@ from components.loaders import load_csv
 from components.figures import load_image
 from components.dataset import load_master
 from components.sidebar import render_sidebar, sidebar_down
+import os
+from pathlib import Path
+import pandas as pd
+from components.dataset import get_engine
 
 page = render_sidebar()
 
@@ -45,59 +49,105 @@ nombre_imagen = st.text_input(
 if nombre_imagen:
     load_image(nombre_imagen)
 
+# Uso de suelo I
+nombre_imagen = st.text_input(
+    "Uso de suelo",
+    value="05_uso_suelo.png"
+)
 
-# Tabla de master
-if "gdf_master" not in st.session_state:
-    st.error("No se encontró gdf_master. Vuelve a la página principal primero.")
-else:
-    gdf_master = st.session_state["gdf_master"]
+# Uso de suelo II
+nombre_imagen = st.text_input(
+    "Gráfico de barra: uso de suelo",
+    value="01_uso_suelo_diagrama_barras.png"
+)
 
-    st.write("Filas:", len(gdf_master))
-    st.dataframe(
-        gdf_master.drop(columns="geometry").head(100),
-        use_container_width=True
-    )
+if nombre_imagen:
+    load_image(nombre_imagen)
 
+# mapa socioeconomico
+nombre_imagen = st.text_input(
+    "Mapas socioeconómicos",
+    value="02_mapas_socioeconomicos.png"
+)
 
-    '''
-    st.header("📊 Exploración de Datos")
+if nombre_imagen:
+    load_image(nombre_imagen)
 
-    tab1, tab2, tab3 = st.tabs(["📋 Resumen", "📈 Estadísticas", "🗂️ Metadatos"])
+# mapa red vial
+nombre_imagen = st.text_input(
+    "Mapas de red vial",
+    value="03_mapas_red_vial.png"
+)
 
-    with tab1:
-        st.subheader("Fuentes de Datos Integradas")
+if nombre_imagen:
+    load_image(nombre_imagen)
 
-        data_sources = pd.DataFrame({
-            'Fuente': ['OpenStreetMap', 'INE', 'IDE Chile', 'Sentinel-2', 'SRTM DEM'],
-            'Tipo': ['Vectorial', 'Tabular', 'Vectorial', 'Raster', 'Raster'],
-            'Última Actualización': ['2024-01', '2023-12', '2024-01', '2024-01', '2023-06'],
-            'Estado': ['✅ Cargado', '✅ Cargado', '⏳ Pendiente', '⏳ Pendiente', '✅ Cargado']
-        })
+# --- CONFIGURACIÓN DE ENTORNO ---
+BASE_DIR = Path('..')
+DATA_RAW = BASE_DIR / 'data' / 'raw'
+DATA_PROCESSED = BASE_DIR / 'data' / 'processed'
 
-        st.dataframe(data_sources, use_container_width=True)
+engine = get_engine()
 
-    with tab2:
-        st.subheader("Estadísticas Descriptivas")
+# --- FUNCIÓN DE VERIFICACIÓN ---
+def check_files(directory, file_list):
+    results = []
+    for f in file_list:
+        fpath = directory / f
+        if fpath.exists():
+            size_mb = fpath.stat().st_size / (1024 * 1024)
+            results.append({"Archivo": f, "Estado": "✅ Encontrado", "Tamaño (MB)": f"{size_mb:.2f}"})
+        else:
+            results.append({"Archivo": f, "Estado": "❌ No encontrado", "Tamaño (MB)": "-"})
+    return pd.DataFrame(results)
 
-        # Gráfico de ejemplo
-        fig = px.bar(
-            x=['Residencial', 'Comercial', 'Industrial', 'Áreas Verdes', 'Otros'],
-            y=[45, 20, 15, 12, 8],
-            labels={'x': 'Uso del Suelo', 'y': 'Porcentaje (%)'},
-            title='Distribución de Uso del Suelo'
-        )
-        st.plotly_chart(fig, use_container_width=True)
+# --- LISTAS DE ARCHIVOS ---
+raw_expected = [
+    'manzanas_censales.geojson',
+    'comuna_boundaries_oficial.geojson',
+    'osm_buildings.geojson',
+    'osm_network.graphml',
+    'uso_suelo_minvu.geojson',
+    'sentinel2_B04.tif',
+    'sentinel2_B08.tif',
+    'srtm_dem_32719.tif'
+]
 
-    with tab3:
-        st.subheader("Metadatos del Proyecto")
-        st.json({
-            'proyecto': 'Laboratorio Integrador',
-            'version': '1.0.0',
-            'fecha_creacion': '2024-01-15',
-            'ultima_actualizacion': '2024-01-20',
-            'crs': 'EPSG:32719',
-            'formato_datos': ['GeoJSON', 'Shapefile', 'GeoTIFF', 'CSV']
-        })
-        '''
+processed_expected = [
+    'manzanas_atributos.geojson',
+    'manzanas_uso_suelo.geojson',
+    'metrics_network.csv',
+    'censo_microdatos.csv',
+    'network_nodes_metrics.geojson',
+    'sentinel2_ndvi.tif',
+    'slope.tif'
+]
+
+# --- INTERFAZ STREAMLIT ---
+st.title("🔎 Verificación de Archivos y Conexión a BD")
+
+tab1, tab2, tab3 = st.tabs(["📂 Archivos RAW", "📂 Archivos Procesados", "🗄️ Conexión BD"])
+
+DB_HOST = "postgis"
+DB_NAME = "geodatabase"
+
+with tab1:
+    st.subheader("Archivos RAW esperados")
+    df_raw = check_files(DATA_RAW, raw_expected)
+    st.dataframe(df_raw, use_container_width=True)
+
+with tab2:
+    st.subheader("Archivos PROCESSED esperados")
+    df_proc = check_files(DATA_PROCESSED, processed_expected)
+    st.dataframe(df_proc, use_container_width=True)
+
+with tab3:
+    st.subheader("Conexión a PostGIS")
+    try:
+        with engine.connect() as conn:
+            st.success(f"✔ Conectado a: {DB_NAME} en {DB_HOST}")
+    except Exception as e:
+        st.error(f"❌ Error de conexión: {e}")
+
     
 sidebar_down()

@@ -32,14 +32,6 @@ def render_sidebar():
     with st.sidebar:
         st.image("https://registro.usach.cl/imagen/UsachP2.png", width=150)
         st.markdown("---")
-
-        st.markdown("### 📊 Navegación")
-        page = st.selectbox(
-            "Seleccione una sección:",
-            ["🏠 Inicio", "📊 Datos", "🗺️ Análisis Espacial", "🤖 Machine Learning", "📈 Resultados"]
-        )
-
-        st.markdown("---")
         st.markdown("### ℹ️ Información")
         st.info(
             """
@@ -51,7 +43,6 @@ def render_sidebar():
             """
         )
 
-    return page
 
 
 def sidebar_down():

@@ -7,6 +7,15 @@ from streamlit_folium import st_folium
 import plotly.express as px
 from components.figures import load_image
 from components.sidebar import render_sidebar, sidebar_down
+from components.dataset import load_master
+
+# Revisar si ya existe en session_state
+if "gdf_master" not in st.session_state:
+    gdf_master = load_master()
+    st.success("Datos cargados correctamente desde PostGIS")
+    st.session_state["gdf_master"] = gdf_master
+else:
+    gdf_master = st.session_state["gdf_master"]
 
 page = render_sidebar()
 
@@ -32,6 +41,26 @@ col2.metric("Moran I", round(summary["morans_i"], 4))
 col3.metric("p-value", round(summary["p-value"], 4))
 col4.metric("Metodo Pesos", summary["metodo_pesos"])
 
+st.subheader("Análisis de Clusters Espaciales - LISA")
+
+# LISA - ndvi
+nombre_imagen = st.text_input(
+    "LISA - NDVI",
+    value="08_lisa_ndvi.png"
+)
+
+if nombre_imagen:
+    load_image(nombre_imagen)
+
+
+# LISA - poblacion
+nombre_imagen = st.text_input(
+    "LISA - Población Total",
+    value="08_lisa_poblacion.png"
+)
+
+if nombre_imagen:
+    load_image(nombre_imagen)
 
 st.subheader("📈 Variogramas Experimentales")
 
@@ -66,25 +95,6 @@ st.plotly_chart(fig, use_container_width=True)
 fig = variogram_plot(vario_slope, "Variograma SLOPE Mean")
 st.plotly_chart(fig, use_container_width=True)
 
-gdf = st.session_state["gdf_master"]
-
-# Coordenadas aproximadas del centro de San Joaquín
-CENTER_LAT = -33.4926
-CENTER_LON = -70.6272
-
-st.subheader("📈 Gráfico Folium: Comuna")
-m = folium.Map(
-    location=[CENTER_LAT, CENTER_LON],
-    zoom_start=14
-)
-
-folium.GeoJson(
-    gdf,
-    tooltip=["manzent", "nom", "pop_density"]
-).add_to(m)
-
-st_folium(m, height=600, width=1000)
-
 df = st.session_state["gdf_master"]
 
 st.subheader("📊 Gráfico Plotly: Relación entre área y número de edificios")
@@ -100,24 +110,3 @@ fig = px.scatter(
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
-
-'''
-    st.header("🗺️ Análisis Espacial")
-
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        st.subheader("Autocorrelación Espacial - Moran's I")
-
-        # Placeholder para gráfico
-        st.info("Aquí se mostrará el análisis de autocorrelación espacial")
-
-    with col2:
-        st.subheader("Métricas")
-        st.metric("Moran's I Global", "0.642", "Alto clustering")
-        st.metric("P-value", "0.001", "Significativo")
-        st.metric("Z-score", "15.23", "")
-    '''
-
-sidebar_down()
