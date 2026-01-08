@@ -73,6 +73,19 @@ nombre_imagen = st.text_input(
 if nombre_imagen:
     load_image(nombre_imagen)
 
+st.markdown("""
+### 🗺️ Densidad Poblacional  
+Este mapa de la esquina izquierda muestra cómo se distribuye la población en el área. Los colores más oscuros representan zonas con mayor densidad de habitantes, mientras que los tonos claros indican áreas menos pobladas. Se observa que la población no está repartida de manera uniforme: existen sectores muy concentrados y otros con baja densidad, lo que refleja desigualdad espacial en la ocupación del territorio.  
+
+### 🏠 Cantidad de Viviendas  
+Aquí se representa el número de viviendas por zona. Los tonos más oscuros indican áreas con mayor cantidad de casas, mientras que los claros muestran sectores con pocas viviendas. El patrón revela que las viviendas tienden a agruparse en ciertos sectores, lo que puede estar relacionado con la densidad poblacional y el desarrollo urbano.  
+
+### ⚠️ Vulnerabilidad (Material Irrecuperable)  
+Este mapa de la esquina derecha señala las zonas donde existen viviendas construidas con materiales vulnerables o irrecuperables. El contraste entre negro (sin vulnerabilidad) y amarillo (con vulnerabilidad) permite identificar áreas críticas. Aunque son menos numerosas, estas zonas vulnerables son importantes porque concentran riesgos sociales y estructurales, lo que puede afectar la resiliencia frente a desastres o problemas urbanos. 
+
+""")
+
+
 # mapa red vial
 nombre_imagen = st.text_input(
     "Mapas de red vial",
@@ -81,6 +94,15 @@ nombre_imagen = st.text_input(
 
 if nombre_imagen:
     load_image(nombre_imagen)
+
+st.markdown("""
+### 🚦 Densidad Vial  
+Este mapa de la izquierda muestra la cantidad de vías presentes en cada zona. Los colores más intensos (rojo y amarillo) indican sectores con mayor densidad de calles, mientras que el negro refleja áreas sin presencia vial. En términos simples, el mapa permite identificar cuáles sectores están mejor conectados por infraestructura vial y cuáles presentan carencias, lo que influye directamente en la accesibilidad y movilidad urbana.  
+
+### 🌐 Centralidad (Betweenness)  
+Este mapa de la derecha representa la importancia de ciertos nodos o sectores dentro de la red vial, medida por cuántas veces aparecen en las rutas más cortas entre distintos puntos. Los colores más cálidos (magenta, naranja y amarillo) señalan zonas con mayor centralidad, es decir, lugares clave para el flujo de tránsito y la conectividad. Los tonos oscuros (azul y púrpura) muestran áreas con baja relevancia en la red. En otras palabras, este mapa ayuda a identificar los puntos estratégicos que funcionan como “puentes” o conexiones críticas dentro de la ciudad.  
+
+""")
 
 # --- CONFIGURACIÓN DE ENTORNO ---
 BASE_DIR = Path('..')
