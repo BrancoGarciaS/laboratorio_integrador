@@ -1,155 +1,124 @@
-# Datos del Laboratorio Integrador
+# Datos del laboratorio integrador:
 
-Este archivo documenta el contenido de la carpeta `data/`, separando fuentes originales (`raw/`) de productos procesados (`processed/`). Permite reproducibilidad, control de calidad y verificación del cumplimiento de las fuentes mínimas requeridas en la guía del laboratorio.
+Este archivo documenta el contenido de la carpeta `data/`, separando fuentes originales (`raw/`) de los archivos procesados (`processed/`). Permitiendo la reproducibilidad, control de calidad y verificación del cumplimiento de las fuentes mínimas requeridas en la guía del laboratorio.
 
-## Resumen de Fuentes (raw/)
+## 1. Requisitos previos:
 
-Cada dataset se limita a la comuna ingresada vía parámetro `--comuna` del script `scripts/download_data.py`.
+Asegurarse de tener el entorno virtual activado y las dependencias instaladas:
 
-| Archivo / Carpeta | Fuente | Filtro por comuna | Uso principal |
-|-------------------|--------|-------------------|---------------|
-| `comuna_boundaries_oficial.geojson` | IDE Chile (ZIP DPA oficial) | Sí (filtrado nominal dentro del shapefile) | Base cartográfica oficial / recortes |
-| `osm_network.graphml` | OpenStreetMap (OSMnx) | Sí (query place) | Red vial y análisis de accesibilidad |
-| `osm_buildings.geojson` | OpenStreetMap | Sí | Edificaciones (densidad, tipologías futuras) |
-| `osm_amenities.geojson` | OpenStreetMap | Sí | Amenidades (POIs para accesibilidad / servicios) |
-| `osm_boundary.geojson` | OSM (fallback) | Sí | Límite alternativo si falla IDE / DPA |
-| `manzanas_censales.geojson` | INE (FeatureService) | Sí (WHERE sobre COMUNA) | Unidad de análisis espacial (manzana) |
-| `Censo2017_ManzanaEntidad_CSV/` | INE (microdatos RAR) | Sí (CSV de manzanas reducido a código de comuna) | Atributos socio-demográficos por manzana |
-| `uso_suelo_minvu/` | IDE MINVU (ZIP Koha) | Sí (podado subdir PRC sólo para la comuna) | Insumos normativos (PRC, zonas, regulaciones) |
-| `uso_suelo_minvu.geojson` | Derivado (MINVU) | Sí (merge PRC comuna) | GeoJSON consolidado para análisis rápidos |
-| `S34W071.hgt` (u otros tiles) | SRTM / Skadi mirrors | Indirecto (selección espacial por bbox de comuna) | Elevación bruta original tile |
-| `srtm_dem.tif` | Procesado SRTM | Sí (recorte a límites) | DEM para análisis topográfico local |
-| `srtm_dem_32719.tif` | Procesado SRTM reproyectado | Sí | DEM en UTM (EPSG:32719) para métricas derivadas |
-| `sentinel2_B04.tif`, `sentinel2_B08.tif` | Sentinel-2 L2A (Planetary Computer) | Sí (clip a bbox + máscara límites) | Cálculo índices (NDVI, etc.) |
-| `metadata.txt` | Generado | N/A | Inventario de fuentes detectadas y archivos |
+```bash
+# Levantar servicios Docker
+docker compose up -d
 
-## Detalle de Carpetas Importantes
+# Activar entorno (Windows PowerShell)
+../venv/Scripts/Activate.ps1
 
-### `raw/uso_suelo_minvu/IPT_Metropolitana/`
-- `LU/`: Capa de usos de suelo general (se conserva completa).
-- `PRC/`: Tras la descarga se filtra y se eliminan todos los archivos de otras comunas; quedan sólo los conjuntos para la comuna (variantes base, `_R`, `_ZNE` si existen).
-- `PRMS/`: Capa metropolitana (referencia; no se filtra por ser supra-comunal).
-- Consolidación: Los shapefiles seleccionados se combinan en `uso_suelo_minvu.geojson` para facilitar carga y análisis.
-
-### `raw/Censo2017_ManzanaEntidad_CSV/`
-Estructura RAR descomprimida del INE. El archivo `Censo2017_Manzanas.csv` ha sido filtrado para conservar sólo filas de la comuna seleccionada (manteniendo archivos de referencia regional/provincial para trazabilidad). Subcarpeta `Censo2017_Identificación_Geográfica/` incluye tablas auxiliares (Regiones, Provincias, Comunas, Distritos, Áreas, etc.).
-
-## Filtro por Comuna (confirmación)
-
-El script `download_data.py` aplica filtro específico para cada fuente:
-- OSM (network, buildings, amenities): consulta place `"<comuna>, Chile"` restringe geocódigo.
-- Límites DPA: se lee shapefile y se filtra por nombre normalizado de la comuna.
-- Manzanas censales (FeatureService): cláusulas `WHERE` sobre campo COMUNA (varias variantes + fallback LIKE) hasta obtener la geometría.
-- Microdatos Censo (manzanas CSV): filtrado por código oficial de comuna (fuzzy matching si nombre difiere en encoding/acentos).
-- Uso de suelo MINVU: selección de shapefiles cuyo stem contiene tokens normalizados de la comuna y poda de PRC ajenos.
-- DEM SRTM: selección de tiles mínimos que cubren bbox de la comuna y recorte espacial de raster.
-- Sentinel-2: búsqueda STAC con `bbox` de la comuna y clip/mask por límites.
-
-## Comandos de Ejemplo
-
-Descarga sólo uso de suelo MINVU:
-```
-python scripts/download_data.py --comuna "San Joaquin" --sources ide_minvu --debug
+# Instalar dependencias
+pip install -r ../requirements.txt
 ```
 
-Descarga completa (todas las fuentes principales):
-```
-python scripts/download_data.py --comuna "San Joaquin" --sources all --debug
-```
+## 2. Resumen: comandos a ejecutar para descargar y procesar datos:
 
-Descarga censo + microdatos (activando flujo nuevo):
-```
-python scripts/download_data.py --comuna "San Joaquin" --sources censo --debug
+Para descargar y procesar los datos, se deben ejecutar los siguientes comandos:
 
-python scripts/download_data.py --comuna "San Joaquín" --sources ine_censo2017 --debug
+```bash
+# Descarga de datos
+python download_data.py --comuna "San Joaquín" --year 2024 --sources all
 
-```
-
-Descarga sólo OSM + SRTM + Sentinel-2:
-```
-python scripts/download_data.py --comuna "San Joaquin" --sources osm,srtm,copernicus --debug
+# Procesamiento de datos
+python scripts/process_data.py
 ```
 
-Uso de archivo local MINVU (ejemplo shapefile ya descargado):
-```
-python scripts/download_data.py --comuna "San Joaquin" --sources ide_minvu --minvu-local data/external/IPT_13_PRC_San_Joaquin.shp
-```
+## 3. Descargar datos:
 
-## Próximos Pasos (procesado / análisis)
+En la carpeta `scripts/` se tiene el código para la adquisición de datos (`download_data.py`), el cual se conecta a diversas APIs y servicios (INE, OpenStreetMap, Google Earth Engine / Copernicus, IDE Minvu) para descargar los datos crudos en `data/raw/`.
 
-1. Generar índices (NDVI) a partir de `sentinel2_B04.tif` y `sentinel2_B08.tif` → mover resultados a `processed/`.
-2. Derivar pendientes y orientaciones del DEM (`srtm_dem_32719.tif`).
-3. Integrar atributos socio-demográficos con uso de suelo (join espacial manzanas ↔ zonas PRC).
-4. Carga de capas consolidadas a PostGIS (contenedor Docker `postgis`).
+Para descargar todas las capas necesarias para una comuna específica (ej.: San Joaquín) y un año de referencia, se debe ejecutar el siguiente comando:
 
-## Notas de Reproducibilidad
-
-- Repetir la descarga con otra comuna generará un nuevo conjunto filtrado, sobrescribiendo archivos existentes (mantener control de versiones si se comparan comunas).
-- Para análisis multi-comunal se recomienda mover resultados a `processed/<comuna>/` antes de descargar la siguiente.
-
-## Licencias y Fuentes
-
-- OSM: Datos abiertos bajo ODbL.
-- INE Censo 2017: Uso académico (ver términos INE Chile).
-- SRTM: Dominio público (USGS/NASA).
-- Sentinel-2: Copernicus Programme (libre uso con atribución).
-- MINVU: Información pública de planificación (ver catálogo MINVU).
-
-## Metadatos
-
-Archivo `metadata.txt` registra: comuna, fecha de descarga ISO8601, fuentes detectadas y listado de archivos finales presente tras la ejecución del script.
-
-ESTO LO AGREGUE YOOOO:
-#### 4.8 Ingesta mínima de fuentes base
-
-La bandera `--ingest-minimum` carga en PostGIS las fuentes originales mínimas (límite oficial, manzanas censales, uso_suelo_minvu consolidado, microdatos censo) y cataloga los rasters base (DEM y bandas Sentinel) sin mover píxeles a la base.
-
-Acciones:
-- Vectoriales → tablas (`comuna_boundaries_oficial`, `manzanas_censales`, `uso_suelo_minvu`).
-- Microdatos censo → tabla `censo_microdatos` (primeras columnas para ligereza).
-- Rasters base → filas en `{schema}.raster_catalog` con `source_group='raw'`.
-
-Comando recomendado (añade índices y reproyección):
-```powershell
-python scripts/process_data.py --ingest-minimum --srid 32719 --index
-```
-Luego ejecutar derivados y productos y cargarlos al esquema de procesados:
-```powershell
-python scripts/process_data.py --dem-derivatives --ndvi --join-censo --join-uso-suelo --metrics --unify-uso-suelo --network-metrics --srid 32719
-python scripts/process_data.py --ingest-processed --processed-schema processed_data
-```
-##### Verificación PostGIS de la ingesta mínima
-
-Listar tablas cargadas en el esquema `raw_data`:
-```powershell
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT table_name FROM information_schema.tables WHERE table_schema='raw_data' ORDER BY table_name;"
+```bash
+python download_data.py --comuna "San Joaquín" --year 2024 --sources all
 ```
 
-Verificar SRID de geometrías principales:
-```powershell
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT 'comuna_boundaries_oficial' AS tabla, Find_SRID('raw_data','comuna_boundaries_oficial','geometry') UNION ALL SELECT 'manzanas_censales', Find_SRID('raw_data','manzanas_censales','geometry') UNION ALL SELECT 'uso_suelo_minvu', Find_SRID('raw_data','uso_suelo_minvu','geometry');"
+Si se necesita descargar o actualizar solo una fuente en particular, se puede usar el flag --sources con las siguientes combinaciones:
+
+| Fuente de Datos        | Comando              | Descripción                                                                 | Archivos Generados (data/raw)                                               |
+|------------------------|----------------------|------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| INE / IDE Chile        | --sources ine     | Límites comunales, manzanas censales y datos del Censo 2017.                 | comuna_boundaries_oficial.geojson, manzanas_censales.geojson, Censo2017_... |
+| OpenStreetMap          | --sources osm     | Red vial, edificios y equipamiento (amenities).                              | osm_network.graphml, osm_buildings.geojson, osm_amenities.geojson           |
+| DEM (Topografía)       | --sources srtm    | Modelo Digital de Elevación (SRTM).                                          | srtm_dem.tif, srtm_dem_32719.tif (reproyectado)                             |
+| Sentinel-2             | --sources sentinel| Imágenes satelitales (bandas roja e infrarroja) para cálculo de NDVI.         | sentinel2_B04.tif (Roja), sentinel2_B08.tif (NIR)                          |
+| IDE Minvu              | --sources minvu   | Capas de uso de suelo y planificación territorial.                           | uso_suelo_minvu.geojson                                                    |
+
+Por ejemplo, se pueden ejecutar los siguientes comandos:
+
+```bash
+# Solo descargar la red vial
+python download_data.py --comuna "San Joaquín" --year 2024 --sources osm
+
+# Solo descargar topografía (DEM)
+python download_data.py --comuna "San Joaquín" --year 2024 --sources srtm
 ```
 
-Conteos básicos:
-```powershell
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS manzanas FROM raw_data.manzanas_censales;"
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS microdatos FROM raw_data.censo_microdatos;"
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT COUNT(*) AS uso_suelo FROM raw_data.uso_suelo_minvu;"
+### Fuentes de datos mínimas requeridas (obtenidas con el script de descarga):
+
+La siguiente tabla detalla los datos requeridos del enunciado, obtenidos para la comuna de San Joaquín en la carpeta de descarga `data/raw`, con el script `download_data.py`:
+
+| Tipo de Dato | Archivo obtenido (Raw) | Fuente | Uso Principal |
+| :--- | :--- | :--- | :--- |
+| **Límites administrativos** | `comuna_boundaries_oficial.geojson` | IDE Chile (API) | Recorte de capas y definición de zona de estudio |
+| **Manzanas censales** | `manzanas_censales.geojson` | INE (ArcGIS REST) | Unidad mínima de análisis espacial (vectores) |
+| **Censo 2017** | `Censo2017_Manzanas.csv` | INE (Redatam) | Variables demográficas y socioeconómicas (tabla) |
+| **Red vial** | `osm_network.graphml` | OpenStreetMap (OSMnx) | Cálculo de accesibilidad, centralidad y densidad |
+| **Uso del suelo** | `uso_suelo_minvu.geojson` | IDE Minvu | Zonificación y planificación territorial |
+| **DEM** | `srtm_dem_32719.tif` | SRTM (NASA/USGS) | Análisis topográfico (pendiente, aspecto) |
+| **Sentinel-2** | `sentinel2_B04.tif` y `B08.tif` | Copernicus (AWS) | Cálculo de índice de vegetación (NDVI) |
+
+> **Notas:**
+> * `Censo2017_Manzanas.csv` está ubicado en: `data/raw/Censo2017_ManzanaEntidad_CSV/...`
+> * `uso_suelo_minvu.geojson` fue consolidado desde: `data/raw/uso_suelo_minvu/IPT_Metropolitana/PRC/IPT_13_PRC_San_Joaquin.shp`
+> * `srtm_dem_32719.tif` derivado de: `S34W071.hgt` (recortado y reproyectado a EPSG:32719)
+> Se genera automáticamente el archivo `metadata.txt` que tiene la función de ser un inventario de fuentes detectadas y archivos.
+
+## 4. Procesar datos:
+
+En la carpeta `scripts/` se tiene el código para el procesamiento de datos (`process_data.py`), el cual toma los archivos crudos de `data/raw/`, realiza limpieza, cálculos espaciales (como NDVI, pendientes, métricas de red) y genera productos listos para el análisis en `data/processed/`. También maneja la ingesta a la base de datos PostGIS.
+
+Para ejecutar el pipeline completo de procesamiento (limpieza, generación de métricas e ingesta a base de datos), se debe ejecutar el siguiente comando:
+
+```bash
+python scripts/process_data.py
 ```
 
-Rasters base catalogados (metadatos):
-```powershell
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT filename, crs, width, height, band_count FROM raw_data.raster_catalog ORDER BY filename;"
+También se pueden usar ciertas banderas para fines específicos:
+```bash
+# Solo calcular NDVI y pendientes (sin tocar la base de datos)
+python process_data.py --ndvi --dem
+
+# Ejecutar todo el análisis pero SIN ingestar a PostGIS (solo archivos locales)
+python process_data.py --ndvi --dem --network --metrics --uso-suelo
+
 ```
 
-Si se ejecuta nuevamente `--ingest-minimum` no debería duplicar entradas en `raster_catalog` (usa PRIMARY KEY sobre filename). Para comprobar idempotencia:
-```powershell
-docker compose exec postgis psql -U geouser -d geodatabase -c "SELECT filename, source_group FROM raw_data.raster_catalog;"
-```
+Nota: La bandera `--ingest-minimum` carga en PostGIS las fuentes originales mínimas (límite oficial, manzanas censales, uso_suelo_minvu consolidado, microdatos censo) y cataloga los rasters base (DEM y bandas Sentinel) sin mover píxeles a la base.
 
-Pipeline completo (mínima + derivados + catalogación processed):
-```powershell
-python scripts/process_data.py --ingest-minimum --srid 32719 --index
-python scripts/process_data.py --dem-derivatives --ndvi --join-censo --join-uso-suelo --metrics --unify-uso-suelo --network-metrics --srid 32719
-python scripts/process_data.py --ingest-processed --processed-schema processed_data
-```
+### Datos procesados
+
+La siguiente tabla detalla todos los archivos resultantes del pipeline de procesamiento (`process_data.py`), guardados en `data/processed`:
+
+| Categoría | Archivo Procesado | Contenido / Transformación Realizada |
+| :--- | :--- | :--- |
+| **Dataset integrado** | `manzanas_atributos.geojson` | Unión de geometría de manzanas + Datos Censo (Join por `manzent`). Base del análisis sociodemográfico. |
+|  | `manzanas_uso_suelo.geojson` | Cruce espacial (Overlay) entre manzanas y zonas de uso de suelo del MINVU. |
+| **Métricas calculadas** | `metrics_network.csv` | Métricas avanzadas de red (Betweenness, Densidad vial) por manzana. |
+|  | `metrics_manzanas.csv` | Métricas básicas por manzana: conteo de edificios y amenidades interiores. |
+| **Elementos de red** | `network_nodes_metrics.geojson` | Nodos de la red vial con valores de centralidad calculados. |
+|  | `osm_network.gpkg` | Grafo vial convertido a formato GeoPackage optimizado para GIS. |
+| **Índices raster** | `sentinel2_ndvi.tif` | Índice de Vegetación (NDVI) calculado desde bandas Sentinel-2 (B08 y B04). |
+| **Topografía** | `slope.tif` / `aspect.tif` | Mapas de Pendiente (grados) y Orientación derivados del DEM. |
+| **Capas base procesadas** | `comuna_boundaries_oficial.geojson` | Límite comunal reproyectado a EPSG:32719 para consistencia espacial. |
+|  | `manzanas_censales.geojson` | Geometrías de manzanas reproyectadas y con topología limpia. |
+|  | `uso_suelo_minvu.geojson` | Capa de uso de suelo reproyectada y estandarizada. |
+|  | `osm_buildings.geojson` | Edificios de OSM filtrados, reproyectados y limpios. |
+|  | `osm_amenities.geojson` | Puntos de interés (escuelas, hospitales, etc.) reproyectados. |
+| **Tablas auxiliares** | `censo_microdatos.csv` | CSV del Censo con codificación corregida y separado por punto y coma. |
+
