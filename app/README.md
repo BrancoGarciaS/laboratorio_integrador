@@ -41,3 +41,5 @@ La aplicación estará en el puerto habilitado http://localhost:5000/
 ![Página de machine learning](../docs/screenshots/machine_learning.png)
 
 ![Página de raster](../docs/screenshots/raster.png)
+
+![Página de resultados](../docs/screenshots/sintesis_resultados.png)
