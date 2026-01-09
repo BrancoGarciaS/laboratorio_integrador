@@ -3,7 +3,7 @@
 ## Requisitos previos
 * **PostGIS** debe estar activado.  
 * Las carpetas **figures y models** de carpeta `outputs/` deben de estar con contenido.  
-  * Para generarlos es necesario ejecutar los notebooks `01_data_acquisition.ipynb`, `02_exploratory_analysis.ipynb`, `03_geostatistics.ipynb` y `04_machine_learning`.
+  * Para generarlos es necesario ejecutar todos los notebooks: `01_data_acquisition.ipynb`, `02_exploratory_analysis.ipynb`, `03_geostatistics.ipynb`, `04_machine_learning` y `05_results_synthesis`.
 
 Lo primero se debe a que la aplicación extrae información directamente desde la base de datos. Lo segundo corresponde a la recuperación de imágenes y archivos generados en los notebooks. Si estos elementos no están disponibles, los resultados no podrán visualizarse en la página.
 
